@@ -21,7 +21,7 @@ export const checkAuth = catchAsync(async (req, res, next) => {
 
        const decode = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
-       const user = await User.findById(decode.id);
+       const user = await User.findById(decode.id).select("-refreshToken");
 
        if (!user) {
               return next(

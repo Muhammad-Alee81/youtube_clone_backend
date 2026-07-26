@@ -89,8 +89,12 @@ userSchema.methods.generateRefreshToken = function () {
        });
 };
 
-userSchema.post("save", async function () {
-       
-});
-
 export const User = mongoose.model("User", userSchema);
+
+// GET    /users/me
+// PATCH  /users/profile
+// PATCH  /users/avatar
+// PATCH  /users/cover-image
+// PATCH  /users/change-password
+// PATCH  /users/change-email
+// DELETE /users/me
