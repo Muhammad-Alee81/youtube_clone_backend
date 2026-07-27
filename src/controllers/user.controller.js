@@ -7,6 +7,10 @@ import {
        verifyRefreshToken,
 } from "../utils/auth.utils.js";
 import { cookieOption } from "../utils/auth.utils.js";
+import {
+       deletePreviousAvatar,
+       uploadOnCloudinary,
+} from "../utils/cloudinary.js";
 
 export const register = catchAsync(async (req, res, next) => {
        const { username, email, password } = req.body;
@@ -161,4 +165,30 @@ export const updateProfile = catchAsync(async (req, res, next) => {
        );
 
        return res.status(200).json({ message: "profile updated", updatedUser });
+});
+
+export const updateAvatar = catchAsync(async (req, res, next) => {
+       const user = await User.findById(req.user.id).select("-refreshToken");
+
+       const uploadAvatar = await uploadOnCloudinary(
+              req.file.path,
+              "avatar",
+              "image"
+       );
+
+       if (user?.avatar?.publicId) {
+              await deletePreviousAvatar(user?.avatar?.publicId);
+       }
+
+       user.avatar = {
+              url: uploadAvatar?.secure_url,
+              publicId: uploadAvatar?.public_id,
+       };
+
+       await user.save({ validateBeforeSave: false });
+
+       return res.status(200).json({
+              message: "image updated",
+              user,
+       });
 });
