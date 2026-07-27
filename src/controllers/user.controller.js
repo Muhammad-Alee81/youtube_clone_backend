@@ -170,8 +170,14 @@ export const updateProfile = catchAsync(async (req, res, next) => {
 export const updateAvatar = catchAsync(async (req, res, next) => {
        const user = await User.findById(req.user.id).select("-refreshToken");
 
+       const avatarFile = req.file;
+
+       if (!avatarFile) {
+              return next(new ApiError("Image file is missing", 400));
+       }
+
        const uploadAvatar = await uploadOnCloudinary(
-              req.file.path,
+              avatarFile.path,
               "avatar",
               "image"
        );
@@ -191,4 +197,35 @@ export const updateAvatar = catchAsync(async (req, res, next) => {
               message: "image updated",
               user,
        });
+});
+
+export const updateCoverImage = catchAsync(async (req, res, next) => {
+       const user = await User.findById(req.user?.id).select("-refreshToken");
+
+       const imageFile = req.file;
+
+       if (!imageFile) {
+              return next(new ApiError("Image file is missing", 400));
+       }
+
+       const coverImage = await uploadOnCloudinary(
+              imageFile.path,
+              "cover-images",
+              "image"
+       );
+
+       if (user?.coverImage?.publicId) {
+              await deletePreviousAvatar(user?.coverImage?.publicId);
+       }
+
+       user.coverImage = {
+              url: coverImage?.secure_url,
+              publicId: coverImage?.public_id,
+       };
+
+       await user.save({ validateBeforeSave: false });
+
+       return res
+              .status(200)
+              .json({ message: "cover image updated successfully", user });
 });

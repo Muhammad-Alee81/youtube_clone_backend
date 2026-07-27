@@ -7,6 +7,7 @@ import {
        refreshToken,
        register,
        updateAvatar,
+       updateCoverImage,
        updateProfile,
 } from "../controllers/user.controller.js";
 import { checkAuth } from "../middlewares/auth.middleware.js";
@@ -25,6 +26,12 @@ router.route("/update-avatar").patch(
        checkAuth,
        upload.single("avatar"),
        updateAvatar
+);
+
+router.route("/update-cover-image").patch(
+       checkAuth,
+       upload.single("coverImage"),
+       updateCoverImage
 );
 
 export default router;
