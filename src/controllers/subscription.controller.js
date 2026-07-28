@@ -16,9 +16,9 @@ export const subscribeChannel = catchAsync(async (req, res, next) => {
               return next(new ApiError("Invalid channel ID", 400));
        }
 
-       if (subscriber === channelId) {
+       if (subscriber.toString() === channelId) {
               return next(
-                     new ApiError("you cannot subscribe your own channel", 409)
+                     new ApiError("you cannot subscribe your own channel", 400)
               );
        }
 
@@ -45,6 +45,34 @@ export const subscribeChannel = catchAsync(async (req, res, next) => {
        });
 
        return res
+              .status(201)
+              .json({ message: "channel Subscribed", data: subscribe });
+});
+
+export const unSubscribeChannel = catchAsync(async (req, res, next) => {
+       const { channelId } = req.params;
+       const subscriber = req.user?.id;
+
+       if (!channelId) {
+              return next(new ApiError("channel ID is required", 400));
+       }
+
+       if (!mongoose.Types.ObjectId.isValid(channelId)) {
+              return next(new ApiError("Invalid channel ID", 400));
+       }
+
+       const unSubscribe = await Subscription.findOneAndDelete({
+              subscriber,
+              channel: channelId,
+       });
+
+       if (!unSubscribe) {
+              return next(
+                     new ApiError("you are not subscribed to this channel", 404)
+              );
+       }
+
+       return res
               .status(200)
-              .json({ message: "channel Subscribed", subscribe });
+              .json({ message: "channel unsubscribed", data: unSubscribe });
 });
