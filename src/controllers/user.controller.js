@@ -11,6 +11,13 @@ import {
        deletePreviousAvatar,
        uploadOnCloudinary,
 } from "../utils/cloudinary.js";
+import mongoose from "mongoose";
+
+// ---------------------------------------------
+// ---------------------------------------------
+//CONTROLLER FUNCTIONS STARTS HERE
+// ---------------------------------------------
+// ---------------------------------------------
 
 export const register = catchAsync(async (req, res, next) => {
        const { username, email, password } = req.body;
@@ -229,3 +236,63 @@ export const updateCoverImage = catchAsync(async (req, res, next) => {
               .status(200)
               .json({ message: "cover image updated successfully", user });
 });
+
+export const getUserChannelProfileDetails = catchAsync(
+       async (req, res, next) => {
+              const { username } = req.params;
+              const currentUserId = new mongoose.Types.ObjectId(req.user?.id);
+
+              const profile = await User.aggregate([
+                     {
+                            $match: {
+                                   username,
+                            },
+                     },
+
+                     {
+                            $lookup: {
+                                   from: "subscriptions",
+                                   foreignField: "channel",
+                                   localField: "_id",
+                                   as: "subscribers",
+                            },
+                     },
+
+                     {
+                            $lookup: {
+                                   from: "subscriptions",
+                                   foreignField: "subscriber",
+                                   localField: "_id",
+                                   as: "subscribedTo",
+                            },
+                     },
+
+                     {
+                            $addFields: {
+                                   subscribersCount: {
+                                          $size: "$subscribers",
+                                   },
+
+                                   subscribedToCount: {
+                                          $size: "$subscribedTo",
+                                   },
+
+                                   isSubscribed: {
+                                          $cond: {
+                                                 if: {
+                                                        $in: [
+                                                               currentUserId,
+                                                               "$subscribers.subscriber",
+                                                        ],
+                                                 },
+                                                 then: true,
+                                                 else: false,
+                                          },
+                                   },
+                            },
+                     },
+              ]);
+
+              return res.status(200).json({ profile });
+       }
+);

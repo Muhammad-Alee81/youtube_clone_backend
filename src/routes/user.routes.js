@@ -2,6 +2,7 @@ import express from "express";
 import {
        changeCurrentUserPassword,
        getMe,
+       getUserChannelProfileDetails,
        login,
        logout,
        refreshToken,
@@ -33,5 +34,7 @@ router.route("/update-cover-image").patch(
        upload.single("coverImage"),
        updateCoverImage
 );
+
+router.route("/:username").get(checkAuth, getUserChannelProfileDetails);
 
 export default router;
