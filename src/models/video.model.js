@@ -40,7 +40,7 @@ const videoSchema = new mongoose.Schema(
               },
 
               duration: {
-                     type: NUmber,
+                     type: Number,
                      required: [true, "video duration is required"],
               },
 

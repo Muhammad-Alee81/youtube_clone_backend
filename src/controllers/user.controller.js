@@ -242,7 +242,7 @@ export const getUserChannelProfileDetails = catchAsync(
               const { username } = req.params;
               const currentUserId = new mongoose.Types.ObjectId(req.user?.id);
 
-              const profile = await User.aggregate([
+              const channelProfile = await User.aggregate([
                      {
                             $match: {
                                    username,
@@ -291,8 +291,32 @@ export const getUserChannelProfileDetails = catchAsync(
                                    },
                             },
                      },
+
+                     {
+                            $project: {
+                                   username: 1,
+                                   fullName: 1,
+                                   email: 1,
+                                   subscribersCount: 1,
+                                   subscribedToCount: 1,
+                            },
+                     },
               ]);
+
+              if (!channelProfile?.length) {
+                     return next(new ApiError("channel does not exist", 404));
+              }
 
               return res.status(200).json({ profile });
        }
 );
+
+export const getUsersWatchHistory = catchAsync(async (req, res, next) => {
+
+
+
+       
+
+
+       return res.status(200).json({ message: "users watch history" });
+});

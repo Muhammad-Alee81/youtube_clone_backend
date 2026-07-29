@@ -10,6 +10,7 @@ import {
        updateAvatar,
        updateCoverImage,
        updateProfile,
+       getUsersWatchHistory,
 } from "../controllers/user.controller.js";
 import { checkAuth } from "../middlewares/auth.middleware.js";
 import upload from "../middlewares/multer.middleware.js";
@@ -35,6 +36,7 @@ router.route("/update-cover-image").patch(
        updateCoverImage
 );
 
+router.route("/feed/history").get(checkAuth, getUsersWatchHistory);
 router.route("/:username").get(checkAuth, getUserChannelProfileDetails);
 
 export default router;
