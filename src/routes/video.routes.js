@@ -1,5 +1,5 @@
 import express from "express";
-import { uploadVideo } from "../controllers/video.controller.js";
+import { getAllVideos, uploadVideo } from "../controllers/video.controller.js";
 import { checkAuth } from "../middlewares/auth.middleware.js";
 import upload from "../middlewares/multer.middleware.js";
 
@@ -13,5 +13,7 @@ router.route("/upload-video").post(
        ]),
        uploadVideo
 );
+
+router.route("/all").get(getAllVideos);
 
 export default router;
