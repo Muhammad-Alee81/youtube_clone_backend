@@ -62,38 +62,94 @@ export const uploadVideo = catchAsync(async (req, res, next) => {
 });
 
 export const getAllVideos = catchAsync(async (req, res, next) => {
-       const allVideos = await Video.aggregate([
-              {
-                     $lookup: {
-                            from: "users",
-                            foreignField: "_id",
-                            localField: "owner",
-                            as: "owner",
-                            pipeline: [
-                                   {
-                                          $project: {
-                                                 fullName: 1,
-                                                 avatar: 1,
-                                          },
+       const { page, limit, sort, ...filters } = req.validateQuery;
+
+       // ADVANCED FILTERING
+       let queryStr = JSON.stringify(filters);
+
+       queryStr = queryStr.replace(
+              /\b(gt|lt|lte|gte)\b/g,
+              (match) => `$${match}`
+       );
+
+       const pipeline = [];
+
+       if (Object.keys(filters).length) {
+              pipeline.push({
+                     $match: JSON.parse(queryStr),
+              });
+       }
+
+       // SORTING
+       if (sort) {
+              const sortFields = sort.split(",");
+              const sortObj = {};
+
+              sortFields.forEach((field) => {
+                     if (field.startsWith("-")) {
+                            sortObj[field.slice(1)] = -1;
+                     } else {
+                            sortObj[field] = 1;
+                     }
+              });
+
+              pipeline.push({
+                     $sort: sortObj,
+              });
+       }
+
+       // PAGINATION
+       const pageNum = page || 1;
+       const limitNum = limit || 10;
+       const skip = (pageNum - 1) * limitNum;
+
+       pipeline.push({
+              $facet: {
+                     metadata: [{ $count: "totalVideos" }],
+                     
+
+                     data: [
+                            {
+                                   $skip: skip,
+                            },
+                            {
+                                   $limit: limitNum,
+                            },
+                            {
+                                   $lookup: {
+                                          from: "users",
+                                          foreignField: "_id",
+                                          localField: "owner",
+                                          as: "owner",
+                                          pipeline: [
+                                                 {
+                                                        $project: {
+                                                               fullName: 1,
+                                                               avatar: 1,
+                                                        },
+                                                 },
+                                          ],
                                    },
-                            ],
-                     },
+                            },
+                            {
+                                   $unwind: "$owner",
+                            },
+                            {
+                                   $project: {
+                                          title: 1,
+                                          thumbnail: 1,
+                                          videoFile: 1,
+                                          duration: 1,
+                                          owner: 1,
+                                          views: 1,
+                                          createdAt: 1,
+                                   },
+                            },
+                     ],
               },
+       });
 
-              {
-                     $project: {
-                            title: 1,
-                            thumbnail: 1,
-                            videoFile: 1,
-                            duration: 1,
-                            owner: 1,
-                            views: 1,
-                            createdAt: 1,
-                     },
-              },
-       ]);
+       const allVideos = await Video.aggregate(pipeline);
 
-       return res
-              .status(200)
-              .json({ data: { length: allVideos.length, allVideos } });
+       return res.status(200).json({ allVideos });
 });
