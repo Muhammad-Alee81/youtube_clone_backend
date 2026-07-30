@@ -62,28 +62,38 @@ export const uploadVideo = catchAsync(async (req, res, next) => {
 });
 
 export const getAllVideos = catchAsync(async (req, res, next) => {
-       const excludedFields = ["sort", "page", "limit", "fields"];
+       const allVideos = await Video.aggregate([
+              {
+                     $lookup: {
+                            from: "users",
+                            foreignField: "_id",
+                            localField: "owner",
+                            as: "owner",
+                            pipeline: [
+                                   {
+                                          $project: {
+                                                 fullName: 1,
+                                                 avatar: 1,
+                                          },
+                                   },
+                            ],
+                     },
+              },
 
-       const queryObject = { ...req.query };
+              {
+                     $project: {
+                            title: 1,
+                            thumbnail: 1,
+                            videoFile: 1,
+                            duration: 1,
+                            owner: 1,
+                            views: 1,
+                            createdAt: 1,
+                     },
+              },
+       ]);
 
-       excludedFields.forEach((el) => delete queryObject[el]);
-
-       //ADVANCED FILTERING
-       let queryString = JSON.stringify(queryObject);
-       queryString = queryString.replace(
-              /\b(gt|lt|lte|gte)\b/g,
-              (match) => `$${match}`
-       );
-
-       let query = Video.find(JSON.parse(queryString));
-
-       // SORTING
-       if (req.query.sort) {
-              const sortBY = req.query.sort.split(",").join(" ");
-              query.sort(sortBY);
-       }
-
-       const videos = await query;
-
-       return res.status(200).json({ data: { length: videos.length, videos } });
+       return res
+              .status(200)
+              .json({ data: { length: allVideos.length, allVideos } });
 });

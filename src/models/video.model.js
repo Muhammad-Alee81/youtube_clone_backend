@@ -44,9 +44,19 @@ const videoSchema = new mongoose.Schema(
                      required: [true, "video duration is required"],
               },
 
+              views: {
+                     type: Number,
+                     default: 0,
+              },
+
               owner: {
                      type: mongoose.Schema.ObjectId,
                      ref: "User",
+              },
+
+              isPublished: {
+                     type: Boolean,
+                     default: true,
               },
        },
 
