@@ -3,7 +3,9 @@ import { Video } from "../models/video.model.js";
 import ApiError from "../utils/api_error.js";
 import { catchAsync } from "../utils/catch_async.js";
 import {
+       deleteImageFile,
        deletePreviousAvatar,
+       deleteVideoFile,
        uploadOnCloudinary,
 } from "../utils/cloudinary.js";
 import { deleteLocalTempFiles } from "../utils/deleteLocalTempFiles.js";
@@ -327,4 +329,38 @@ export const updateVideo = catchAsync(async (req, res, next) => {
        return res
               .status(200)
               .json({ message: "video updated successfully", updatedVideo });
+});
+
+const deleteThumbnailFromCloud = async (publicId) => {
+       await deleteImageFile(publicId);
+};
+const deleteVideoFromCloud = async (publicId) => {
+       await deleteVideoFile(publicId);
+};
+
+export const deleteVideo = catchAsync(async (req, res, next) => {
+       const { videoId } = req.params;
+
+       if (!mongoose.Types.ObjectId.isValid(videoId)) {
+              return next(new ApiError("invalid ID", 400));
+       }
+
+       const video = await Video.findById(videoId);
+
+       if (!video) {
+              return next(new ApiError("video not found", 404));
+       }
+
+       if (video?.owner.toString() !== req.user.id) {
+              return next(new ApiError("unauthorized", 403));
+       }
+
+       await deleteImageFile(video?.thumbnail?.publicId);
+       await deleteVideoFile(video?.videoFile?.publicId);
+
+       await video.deleteOne();
+
+       return res
+              .status(200)
+              .json({ message: "video deleted successfully", video });
 });

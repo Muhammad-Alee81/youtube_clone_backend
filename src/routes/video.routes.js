@@ -1,5 +1,6 @@
 import express from "express";
 import {
+       deleteVideo,
        getAllVideos,
        getVideoById,
        updateVideo,
@@ -26,5 +27,6 @@ router.route("/upload-video").post(
 );
 
 router.route("/update/:videoId").patch(upload.single("thumbnail"), updateVideo);
+router.route("/delete/:videoId").delete(deleteVideo);
 
 export default router;

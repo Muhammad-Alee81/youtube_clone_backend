@@ -1,6 +1,7 @@
 import { v2 as cloudinary } from "cloudinary";
 import "dotenv/config";
 import fs from "fs";
+import ApiError from "./api_error.js";
 
 // Configuration
 cloudinary.config({
@@ -36,4 +37,23 @@ export const uploadOnCloudinary = async (
 
 export const deletePreviousAvatar = async (publicId) => {
        await cloudinary.uploader.destroy(publicId);
+};
+
+export const deleteImageFile = async (publicId) => {
+       const { result } = await cloudinary.uploader.destroy(publicId, {
+              resource_type: "image",
+       });
+
+       if (result !== "ok") {
+              throw new ApiError("Failed to delete file", 500);
+       }
+};
+export const deleteVideoFile = async (publicId) => {
+       const { result } = await cloudinary.uploader.destroy(publicId, {
+              resource_type: "video",
+       });
+
+       if (result !== "ok") {
+              throw new ApiError("Failed to delete file", 500);
+       }
 };
