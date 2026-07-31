@@ -307,7 +307,7 @@ export const getUserChannelProfileDetails = catchAsync(
                      return next(new ApiError("channel does not exist", 404));
               }
 
-              return res.status(200).json({ profile });
+              return res.status(200).json({ channelProfile });
        }
 );
 
