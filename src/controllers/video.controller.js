@@ -2,9 +2,12 @@ import { size } from "zod";
 import { Video } from "../models/video.model.js";
 import ApiError from "../utils/api_error.js";
 import { catchAsync } from "../utils/catch_async.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import {
+       deletePreviousAvatar,
+       uploadOnCloudinary,
+} from "../utils/cloudinary.js";
 import { deleteLocalTempFiles } from "../utils/deleteLocalTempFiles.js";
-import mongoose, { Mongoose } from "mongoose";
+import mongoose from "mongoose";
 
 export const uploadVideo = catchAsync(async (req, res, next) => {
        const thumbnail = req.files.thumbnail;
@@ -215,7 +218,7 @@ export const getVideoById = catchAsync(async (req, res, next) => {
               return next(new ApiError("incorrect video id", 400));
        }
 
-       const video = await Video.aggregate([
+       const [video] = await Video.aggregate([
               {
                      $match: {
                             _id: new mongoose.Types.ObjectId(
@@ -272,5 +275,56 @@ export const getVideoById = catchAsync(async (req, res, next) => {
               },
        ]);
 
+       if (!video) {
+              return next(new ApiError("video not found", 404));
+       }
+
        return res.status(200).json({ video });
+});
+
+export const updateVideo = catchAsync(async (req, res, next) => {
+       const { title, description } = req.body;
+
+       if (!mongoose.Types.ObjectId.isValid(req.params.videoId)) {
+              return next(new ApiError("invalid object ID", 400));
+       }
+
+       const video = await Video.findById(req.params.videoId);
+
+       if (!video) {
+              return next(new ApiError("video not found", 404));
+       }
+
+       if (video.owner?.toString() !== req.user?.id) {
+              if (req.file?.path) {
+                     deleteLocalTempFiles(req.file?.path);
+              }
+
+              return next(new ApiError("unauthorized", 403));
+       }
+
+       if (req.file) {
+              const oldPublicId = video.thumbnail.publicId;
+              const updatedThumbnail = await uploadOnCloudinary(
+                     req.file?.path,
+                     "thumbnails",
+                     "image"
+              );
+
+              video.thumbnail = {
+                     url: updatedThumbnail.secure_url,
+                     publicId: updatedThumbnail.public_id,
+              };
+
+              await deletePreviousAvatar(oldPublicId);
+       }
+
+       if (title) video.title = title;
+       if (description) video.description = description;
+
+       const updatedVideo = await video.save();
+
+       return res
+              .status(200)
+              .json({ message: "video updated successfully", updatedVideo });
 });
