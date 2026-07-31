@@ -355,10 +355,10 @@ export const deleteVideo = catchAsync(async (req, res, next) => {
               return next(new ApiError("unauthorized", 403));
        }
 
+       await video.deleteOne();
+
        await deleteImageFile(video?.thumbnail?.publicId);
        await deleteVideoFile(video?.videoFile?.publicId);
-
-       await video.deleteOne();
 
        return res
               .status(200)
