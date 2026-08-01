@@ -331,13 +331,6 @@ export const updateVideo = catchAsync(async (req, res, next) => {
               .json({ message: "video updated successfully", updatedVideo });
 });
 
-const deleteThumbnailFromCloud = async (publicId) => {
-       await deleteImageFile(publicId);
-};
-const deleteVideoFromCloud = async (publicId) => {
-       await deleteVideoFile(publicId);
-};
-
 export const deleteVideo = catchAsync(async (req, res, next) => {
        const { videoId } = req.params;
 
@@ -363,4 +356,31 @@ export const deleteVideo = catchAsync(async (req, res, next) => {
        return res
               .status(200)
               .json({ message: "video deleted successfully", video });
+});
+
+export const togglePublishStatus = catchAsync(async (req, res, next) => {
+       const { videoId } = req.params;
+
+       if (!mongoose.Types.ObjectId.isValid(videoId)) {
+              return next(new ApiError("invalid ID", 400));
+       }
+
+       const video = await Video.findById(videoId);
+
+       if (!video) {
+              return next(new ApiError("video not found", 404));
+       }
+
+       if (video?.owner?.toString() !== req.user.id) {
+              return next(new ApiError("unauthorized", 403));
+       }
+
+       video.isPublished = !video.isPublished;
+
+       await video.save();
+
+       return res.status(200).json({
+              message: "Video publish status updated successfully",
+              video,
+       });
 });
