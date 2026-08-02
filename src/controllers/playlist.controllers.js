@@ -57,8 +57,10 @@ export const getPlayListById = catchAsync(async (req, res, next) => {
                 return next(new ApiError("playlist not found", 404));
         }
 
-        if (playList?.owner.toString() !== req.user.id) {
-                return next(new ApiError("unauthorized", 403));
+        const isOwner = playList.owner.equals(req.params.id);
+
+        if (!isOwner && playList.visibility === "private") {
+                return next(new ApiError("playList not found", 403));
         }
 
         return res.status(200).json({ status: "success", playList });
