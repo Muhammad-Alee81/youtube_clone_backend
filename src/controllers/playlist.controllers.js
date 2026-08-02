@@ -88,7 +88,7 @@ export const addVideoToPlaylist = catchAsync(async (req, res, next) => {
                 return next(new ApiError("Video not found", 404));
         }
 
-        const newPlaylist = await Playlist.findOneAndUpdate(
+        const playList = await Playlist.findOneAndUpdate(
                 {
                         _id: playlistId,
                         owner: req.user.id,
@@ -101,12 +101,54 @@ export const addVideoToPlaylist = catchAsync(async (req, res, next) => {
                 { returnDocument: "after" }
         );
 
-        if (!newPlaylist) {
+        if (!playList) {
                 return next(new ApiError("playlist not found", 404));
         }
 
         return res.status(200).json({
                 message: "video added to playlist",
-                playList: newPlaylist,
+                playList: playList,
         });
+});
+
+export const removeVideoFromPlaylist = catchAsync(async (req, res, next) => {
+        const { videoId, playlistId } = req.params;
+
+        if (!videoId || !playlistId) {
+                return next(
+                        new ApiError("video Id or playlist Id is required", 400)
+                );
+        }
+
+        if (
+                !mongoose.Types.ObjectId.isValid(videoId) ||
+                !mongoose.Types.ObjectId.isValid(playlistId)
+        ) {
+                return next(new ApiError("Invalid Id", 400));
+        }
+
+        const video = await Video.findById(videoId);
+
+        if (!video) {
+                return next(new ApiError("Video not found", 404));
+        }
+
+        const playList = await Playlist.findOneAndUpdate(
+                {
+                        _id: playlistId,
+                        owner: req.user.id,
+                },
+                {
+                        $pull: {
+                                videos: videoId,
+                        },
+                },
+                { returnDocument: "after" }
+        );
+
+        if (!playList) {
+                return next(new ApiError("Playlist not found", 404));
+        }
+
+        return res.status(200).json({ status: "success", playList });
 });
