@@ -1,21 +1,27 @@
 import express from "express";
 import {
-       changeCurrentUserPassword,
-       getMe,
-       getUserChannelProfileDetails,
-       login,
-       logout,
-       refreshToken,
-       register,
-       updateAvatar,
-       updateCoverImage,
-       updateProfile,
-       getUsersWatchHistory,
+        changeCurrentUserPassword,
+        getMe,
+        getUserChannelProfileDetails,
+        login,
+        logout,
+        refreshToken,
+        register,
+        updateAvatar,
+        updateCoverImage,
+        updateProfile,
+        getUsersWatchHistory,
 } from "../controllers/user.controller.js";
+
+import playlistRouter from "../routes/playlist.routes.js";
 import { checkAuth } from "../middlewares/auth.middleware.js";
 import upload from "../middlewares/multer.middleware.js";
 
 const router = express.Router();
+
+// NESTED ROUTES
+router.use("/:userId/playlists", playlistRouter);
+/* ----------------------------------------------------- */
 
 router.route("/register").post(register);
 router.route("/login").post(login);
@@ -25,15 +31,15 @@ router.route("/change-password").post(checkAuth, changeCurrentUserPassword);
 router.route("/me").get(checkAuth, getMe);
 router.route("/update-profile").patch(checkAuth, updateProfile);
 router.route("/update-avatar").patch(
-       checkAuth,
-       upload.single("avatar"),
-       updateAvatar
+        checkAuth,
+        upload.single("avatar"),
+        updateAvatar
 );
 
 router.route("/update-cover-image").patch(
-       checkAuth,
-       upload.single("coverImage"),
-       updateCoverImage
+        checkAuth,
+        upload.single("coverImage"),
+        updateCoverImage
 );
 
 router.route("/feed/history").get(checkAuth, getUsersWatchHistory);

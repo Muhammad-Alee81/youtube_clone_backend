@@ -38,3 +38,21 @@ export const getUsersPlaylist = catchAsync(async (req, res, next) => {
 
         return res.status(200).json({ count: playlists.length, playlists });
 });
+
+export const getPlayListById = catchAsync(async (req, res, next) => {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+                return next(new ApiError("Invalid Id", 400));
+        }
+
+        const playList = await Playlist.findById(req.params.id);
+
+        if (!playList) {
+                return next(new ApiError("playlist not found", 404));
+        }
+
+        if (playList?.owner.toString() !== req.user.id) {
+                return next(new ApiError("unauthorized", 403));
+        }
+
+        return res.status(200).json({ status: "success", playList });
+});
