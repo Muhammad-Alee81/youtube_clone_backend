@@ -173,3 +173,40 @@ export const deletePlayList = catchAsync(async (req, res, next) => {
                 .status(200)
                 .json({ message: "playlist deleted successfully" });
 });
+
+export const updatePlaylist = catchAsync(async (req, res, next) => {
+        const { title, description, visibility } = req.body;
+        const { id } = req.params;
+
+        if (title !== undefined && title.trim() === "") {
+                return next(new ApiError("Title cannot be empty", 400));
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+                return next(new ApiError("Invalid Id", 400));
+        }
+
+        const updatedPlayList = await Playlist.findOneAndUpdate(
+                {
+                        _id: id,
+                        owner: req.user.id,
+                },
+                {
+                        $set: {
+                                ...(title !== undefined && { title }),
+                                ...(description !== undefined && {
+                                        description,
+                                }),
+                                ...(visibility !== undefined && { visibility }),
+                        },
+                }
+        );
+
+        if (!updatedPlayList) {
+                return next(new ApiError("playlist is not found", 404));
+        }
+
+        return res
+                .status(200)
+                .json({ message: "playlist updated successfully" });
+});
