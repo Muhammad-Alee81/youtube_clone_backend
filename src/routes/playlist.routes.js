@@ -2,10 +2,11 @@ import express from "express";
 import {
         addVideoToPlaylist,
         createPlaylist,
+        deletePlayList,
         getPlayListById,
         getUsersPlaylist,
         removeVideoFromPlaylist,
-} from "../controllers/playlist.controllers.js";
+} from "../controllers/playlist.controller.js";
 
 import { checkAuth } from "../middlewares/auth.middleware.js";
 
@@ -15,6 +16,7 @@ router.use(checkAuth);
 
 router.route("/").post(createPlaylist);
 router.route("/:id").get(getPlayListById);
+router.route("/:id").delete(deletePlayList);
 
 router.route("/add/:videoId/:playlistId").patch(addVideoToPlaylist);
 router.route("/remove/:videoId/:playlistId").patch(removeVideoFromPlaylist);

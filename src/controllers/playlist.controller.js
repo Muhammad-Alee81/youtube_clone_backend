@@ -152,3 +152,24 @@ export const removeVideoFromPlaylist = catchAsync(async (req, res, next) => {
 
         return res.status(200).json({ status: "success", playList });
 });
+
+export const deletePlayList = catchAsync(async (req, res, next) => {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+                return next(new ApiError("Invalid Id", 400));
+        }
+
+        const deletedPlayList = await Playlist.findOneAndDelete({
+                _id: id,
+                owner: req.user.id,
+        });
+
+        if (!deletedPlayList) {
+                return next(new ApiError("Playlist not found", 404));
+        }
+
+        return res
+                .status(200)
+                .json({ message: "playlist deleted successfully" });
+});
