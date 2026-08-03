@@ -4,8 +4,6 @@ import ApiError from "../utils/api_error.js";
 import { Video } from "../models/video.model.js";
 import { Comment } from "../models/comments.model.js";
 
-
-
 export const addComment = catchAsync(async (req, res, next) => {
         const { videoId } = req.params;
 
@@ -63,4 +61,32 @@ export const replyToComment = catchAsync(async (req, res, next) => {
         });
 
         return res.status(201).json({ childComment });
+});
+
+export const updateComment = catchAsync(async (req, res, next) => {
+        const { commentId } = req.params;
+        const { content } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(commentId)) {
+                return next(new ApiError("Invalid Comment Id", 400));
+        }
+
+        if (!content?.trim()) {
+                return next(new ApiError("comment can not be empty", 400));
+        }
+
+        const updatedComment = await Comment.findOneAndUpdate(
+                { _id: commentId, owner: req.user.id },
+                { $set: { content } },
+                { returnDocument: "after" }
+        );
+
+        if (!updatedComment) {
+                return next(new ApiError("Comment not Found", 404));
+        }
+
+        return res.status(200).json({
+                message: "comment updated successfully",
+                updatedComment,
+        });
 });
