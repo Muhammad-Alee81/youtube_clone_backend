@@ -76,7 +76,7 @@ export const updateComment = catchAsync(async (req, res, next) => {
         }
 
         const updatedComment = await Comment.findOneAndUpdate(
-                { _id: commentId, owner: req.user.id },
+                { _id: commentId, owner: req.user.id, isDeleted: false },
                 { $set: { content } },
                 { returnDocument: "after" }
         );
@@ -88,5 +88,28 @@ export const updateComment = catchAsync(async (req, res, next) => {
         return res.status(200).json({
                 message: "comment updated successfully",
                 updatedComment,
+        });
+});
+
+export const deleteComment = catchAsync(async (req, res, next) => {
+        const { commentId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(commentId)) {
+                return next(new ApiError("Invalid Comment Id", 400));
+        }
+
+        const deletedComment = await Comment.findOneAndUpdate(
+                { _id: commentId, owner: req.user.id, isDeleted: false },
+                { $set: { isDeleted: true, content: "[Comment Deleted]" } },
+                { returnDocument: "after" }
+        );
+
+        if (!deletedComment) {
+                return next(new ApiError("Comment not Found", 404));
+        }
+
+        return res.status(200).json({
+                message: "comment deleted successfully",
+                deletedComment,
         });
 });
