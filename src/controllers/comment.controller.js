@@ -116,6 +116,7 @@ export const deleteComment = catchAsync(async (req, res, next) => {
 
 export const getAllParentComments = catchAsync(async (req, res, next) => {
         const { videoId } = req.params;
+        const { page, sort, limit } = req.validateQuery;
 
         if (!mongoose.Types.ObjectId.isValid(videoId)) {
                 return next(new ApiError("Invalid Id", 400));
@@ -127,7 +128,14 @@ export const getAllParentComments = catchAsync(async (req, res, next) => {
                 return next(new ApiError("video not found", 404));
         }
 
-        const parentComment = await Comment.aggregate([
+        // PAGINATION
+        const pageNum = page || 1;
+        const limitNum = limit || 10;
+        const skip = (pageNum - 1) * limitNum;
+
+        const pipeline = [];
+
+        pipeline.push(
                 {
                         $match: {
                                 video: new mongoose.Types.ObjectId(videoId),
@@ -136,17 +144,52 @@ export const getAllParentComments = catchAsync(async (req, res, next) => {
                 },
 
                 {
-                        $lookup: {
-                                from: "users",
-                                foreignField: "_id",
-                                localField: "owner",
-                                as: "owner",
-                                pipeline: [
+                        $facet: {
+                                metaData: [{ $count: "totalComments" }],
+                                data: [
+                                        {
+                                                $sort: {
+                                                        createdAt: -1,
+                                                },
+                                        },
+
+                                        {
+                                                $skip: skip,
+                                        },
+                                        {
+                                                $limit: limitNum,
+                                        },
+
+                                        {
+                                                $lookup: {
+                                                        from: "users",
+                                                        foreignField: "_id",
+                                                        localField: "owner",
+                                                        as: "owner",
+                                                        pipeline: [
+                                                                {
+                                                                        $project: {
+                                                                                username: 1,
+                                                                                email: 1,
+                                                                                fullName: 1,
+                                                                        },
+                                                                },
+                                                        ],
+                                                },
+                                        },
+
+                                        {
+                                                $unwind: "$owner",
+                                        },
+
                                         {
                                                 $project: {
-                                                        username: 1,
-                                                        email: 1,
-                                                        fullName: 1,
+                                                        content: 1,
+                                                        video: 1,
+                                                        isDeleted: 1,
+                                                        createdAt: 1,
+                                                        updatedAt: 1,
+                                                        owner: 1,
                                                 },
                                         },
                                 ],
@@ -154,23 +197,60 @@ export const getAllParentComments = catchAsync(async (req, res, next) => {
                 },
 
                 {
-                        $unwind: "$owner",
-                },
-
-                {
                         $project: {
-                                content: 1,
-                                video: 1,
-                                isDeleted: 1,
-                                createdAt: 1,
-                                updatedAt: 1,
-                                owner: 1,
+                                totalComments: {
+                                        $ifNull: [
+                                                {
+                                                        $arrayElemAt: [
+                                                                "$metaData.totalComments",
+                                                                0,
+                                                        ],
+                                                },
+                                                0,
+                                        ],
+                                },
+
+                                result: {
+                                        $size: "$data",
+                                },
+
+                                currentPage: {
+                                        $literal: pageNum,
+                                },
+
+                                pageSize: {
+                                        $literal: limitNum,
+                                },
+
+                                totalPages: {
+                                        $ceil: {
+                                                $divide: [
+                                                        {
+                                                                $ifNull: [
+                                                                        {
+                                                                                $arrayElemAt:
+                                                                                        [
+                                                                                                "$metaData.totalComments",
+                                                                                                0,
+                                                                                        ],
+                                                                        },
+                                                                        0,
+                                                                ],
+                                                        },
+                                                        limitNum,
+                                                ],
+                                        },
+                                },
+
+                                comments: "$data",
                         },
-                },
-        ]);
+                }
+        );
+
+        const parentComment = await Comment.aggregate(pipeline);
 
         if (!parentComment.length) {
-                return next(new ApiError("No comment found", 404));
+                return next(new ApiError("No comment found", 200));
         }
 
         return res.status(200).json({ status: "success", parentComment });
