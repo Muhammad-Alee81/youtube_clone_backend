@@ -249,9 +249,5 @@ export const getAllParentComments = catchAsync(async (req, res, next) => {
 
         const parentComment = await Comment.aggregate(pipeline);
 
-        if (!parentComment.length) {
-                return next(new ApiError("No comment found", 200));
-        }
-
         return res.status(200).json({ status: "success", parentComment });
 });
