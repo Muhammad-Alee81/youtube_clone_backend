@@ -113,3 +113,65 @@ export const deleteComment = catchAsync(async (req, res, next) => {
                 deletedComment,
         });
 });
+
+export const getAllParentComments = catchAsync(async (req, res, next) => {
+        const { videoId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(videoId)) {
+                return next(new ApiError("Invalid Id", 400));
+        }
+
+        const video = await Video.findById(videoId);
+
+        if (!video) {
+                return next(new ApiError("video not found", 404));
+        }
+
+        const parentComment = await Comment.aggregate([
+                {
+                        $match: {
+                                video: new mongoose.Types.ObjectId(videoId),
+                                parentComment: null,
+                        },
+                },
+
+                {
+                        $lookup: {
+                                from: "users",
+                                foreignField: "_id",
+                                localField: "owner",
+                                as: "owner",
+                                pipeline: [
+                                        {
+                                                $project: {
+                                                        username: 1,
+                                                        email: 1,
+                                                        fullName: 1,
+                                                },
+                                        },
+                                ],
+                        },
+                },
+
+                {
+                        $unwind: "$owner",
+                },
+
+                {
+                        $project: {
+                                content: 1,
+                                video: 1,
+                                isDeleted: 1,
+                                createdAt: 1,
+                                updatedAt: 1,
+                                owner: 1,
+                        },
+                },
+        ]);
+
+        if (!parentComment.length) {
+                return next(new ApiError("No comment found", 404));
+        }
+
+        return res.status(200).json({ status: "success", parentComment });
+});
