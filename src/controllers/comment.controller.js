@@ -116,7 +116,7 @@ export const deleteComment = catchAsync(async (req, res, next) => {
 
 export const getAllParentComments = catchAsync(async (req, res, next) => {
         const { videoId } = req.params;
-        const { page, sort, limit } = req.validateQuery;
+        const { page, limit } = req.validateQuery;
 
         if (!mongoose.Types.ObjectId.isValid(videoId)) {
                 return next(new ApiError("Invalid Id", 400));
@@ -183,6 +183,24 @@ export const getAllParentComments = catchAsync(async (req, res, next) => {
                                         },
 
                                         {
+                                                $lookup: {
+                                                        from: "comments",
+                                                        foreignField:
+                                                                "parentComment",
+                                                        localField: "_id",
+                                                        as: "replies",
+                                                },
+                                        },
+
+                                        {
+                                                $addFields: {
+                                                        replyCount: {
+                                                                $size: "$replies",
+                                                        },
+                                                },
+                                        },
+
+                                        {
                                                 $project: {
                                                         content: 1,
                                                         video: 1,
@@ -190,6 +208,9 @@ export const getAllParentComments = catchAsync(async (req, res, next) => {
                                                         createdAt: 1,
                                                         updatedAt: 1,
                                                         owner: 1,
+                                                        replyCount: 1,
+                                                        parentComment: 1,
+                                                        replyCount: 1,
                                                 },
                                         },
                                 ],
@@ -198,47 +219,49 @@ export const getAllParentComments = catchAsync(async (req, res, next) => {
 
                 {
                         $project: {
-                                totalComments: {
-                                        $ifNull: [
-                                                {
-                                                        $arrayElemAt: [
-                                                                "$metaData.totalComments",
-                                                                0,
-                                                        ],
-                                                },
-                                                0,
-                                        ],
-                                },
-
-                                result: {
-                                        $size: "$data",
-                                },
-
-                                currentPage: {
-                                        $literal: pageNum,
-                                },
-
-                                pageSize: {
-                                        $literal: limitNum,
-                                },
-
-                                totalPages: {
-                                        $ceil: {
-                                                $divide: [
+                                pagination: {
+                                        totalComments: {
+                                                $ifNull: [
                                                         {
-                                                                $ifNull: [
-                                                                        {
-                                                                                $arrayElemAt:
-                                                                                        [
-                                                                                                "$metaData.totalComments",
-                                                                                                0,
-                                                                                        ],
-                                                                        },
+                                                                $arrayElemAt: [
+                                                                        "$metaData.totalComments",
                                                                         0,
                                                                 ],
                                                         },
-                                                        limitNum,
+                                                        0,
                                                 ],
+                                        },
+
+                                        result: {
+                                                $size: "$data",
+                                        },
+
+                                        currentPage: {
+                                                $literal: pageNum,
+                                        },
+
+                                        pageSize: {
+                                                $literal: limitNum,
+                                        },
+
+                                        totalPages: {
+                                                $ceil: {
+                                                        $divide: [
+                                                                {
+                                                                        $ifNull: [
+                                                                                {
+                                                                                        $arrayElemAt:
+                                                                                                [
+                                                                                                        "$metaData.totalComments",
+                                                                                                        0,
+                                                                                                ],
+                                                                                },
+                                                                                0,
+                                                                        ],
+                                                                },
+                                                                limitNum,
+                                                        ],
+                                                },
                                         },
                                 },
 
@@ -250,4 +273,168 @@ export const getAllParentComments = catchAsync(async (req, res, next) => {
         const parentComment = await Comment.aggregate(pipeline);
 
         return res.status(200).json({ status: "success", parentComment });
+});
+
+export const getCommentReplies = catchAsync(async (req, res, next) => {
+        const { commentId } = req.params;
+        const { page, limit } = req.validateQuery;
+
+        if (!mongoose.Types.ObjectId.isValid(commentId)) {
+                return next(new ApiError("Invalid Id", 400));
+        }
+
+        const checkComment = await Comment.exists({ _id: commentId });
+
+        if (!checkComment) {
+                return next(new ApiError("Comment not found", 404));
+        }
+
+        // PAGINATION
+        const pageNum = page || 1;
+        const limitNum = limit || 5;
+        const skip = (pageNum - 1) * limitNum;
+
+        const pipeline = [
+                {
+                        $match: {
+                                parentComment: new mongoose.Types.ObjectId(
+                                        commentId
+                                ),
+                        },
+                },
+
+                {
+                        $facet: {
+                                metaData: [{ $count: "totalReplies" }],
+                                data: [
+                                        {
+                                                $sort: {
+                                                        createdAt: -1,
+                                                },
+                                        },
+
+                                        {
+                                                $skip: skip,
+                                        },
+
+                                        {
+                                                $limit: limitNum,
+                                        },
+
+                                        {
+                                                $lookup: {
+                                                        from: "users",
+                                                        foreignField: "_id",
+                                                        localField: "owner",
+                                                        as: "owner",
+                                                        pipeline: [
+                                                                {
+                                                                        $project: {
+                                                                                username: 1,
+                                                                        },
+                                                                },
+                                                        ],
+                                                },
+                                        },
+
+                                        {
+                                                $unwind: {
+                                                        path: "$owner",
+                                                        preserveNullAndEmptyArrays: true,
+                                                },
+                                        },
+
+                                        {
+                                                $lookup: {
+                                                        from: "users",
+                                                        localField: "replyTo",
+                                                        foreignField: "_id",
+                                                        as: "replyTo",
+                                                        pipeline: [
+                                                                {
+                                                                        $project: {
+                                                                                username: 1,
+                                                                        },
+                                                                },
+                                                        ],
+                                                },
+                                        },
+
+                                        {
+                                                $unwind: {
+                                                        path: "$replyTo",
+                                                        preserveNullAndEmptyArrays: true,
+                                                },
+                                        },
+
+                                        {
+                                                $project: {
+                                                        content: 1,
+                                                        video: 1,
+                                                        owner: 1,
+                                                        parentComment: 1,
+                                                        replyTo: 1,
+                                                },
+                                        },
+                                ],
+                        },
+                },
+
+                {
+                        $project: {
+                                pagination: {
+                                        totalComments: {
+                                                $ifNull: [
+                                                        {
+                                                                $arrayElemAt: [
+                                                                        "$metaData.totalReplies",
+                                                                        0,
+                                                                ],
+                                                        },
+                                                        0,
+                                                ],
+                                        },
+
+                                        result: {
+                                                $size: "$data",
+                                        },
+
+                                        pageSize: {
+                                                $literal: limitNum,
+                                        },
+
+                                        currentPage: {
+                                                $literal: pageNum,
+                                        },
+
+                                        totalPages: {
+                                                $ceil: {
+                                                        $divide: [
+                                                                {
+                                                                        $ifNull: [
+                                                                                {
+                                                                                        $arrayElemAt:
+                                                                                                [
+                                                                                                        "$metaData.totalReplies",
+                                                                                                        0,
+                                                                                                ],
+                                                                                },
+                                                                                0,
+                                                                        ],
+                                                                },
+
+                                                                limitNum,
+                                                        ],
+                                                },
+                                        },
+                                },
+
+                                data: "$data",
+                        },
+                },
+        ];
+
+        const replies = await Comment.aggregate(pipeline);
+
+        return res.status(200).json({ status: "success", replies });
 });

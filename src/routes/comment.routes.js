@@ -3,6 +3,7 @@ import {
         addComment,
         deleteComment,
         getAllParentComments,
+        getCommentReplies,
         replyToComment,
         updateComment,
 } from "../controllers/comment.controller.js";
@@ -15,7 +16,9 @@ const router = express.Router({ mergeParams: true });
 router.use(checkAuth);
 router.route("/:videoId/").post(addComment);
 
-router.route("/:commentId/replies").post(replyToComment);
+router.route("/:commentId/replies")
+        .post(replyToComment)
+        .get(validation(commentQueryValidation), getCommentReplies);
 router.route("/:commentId/update").patch(updateComment);
 router.route("/:commentId/delete").patch(deleteComment);
 
