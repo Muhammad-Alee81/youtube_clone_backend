@@ -183,7 +183,7 @@ export const updatePlaylist = catchAsync(async (req, res, next) => {
         }
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
-                return next(new ApiError("Invalid Id", 400));
+                return next(new ApiError("Invalid Id", 400));      
         }
 
         const updatedPlayList = await Playlist.findOneAndUpdate(
