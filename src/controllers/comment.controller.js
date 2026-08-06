@@ -25,7 +25,10 @@ export const addComment = catchAsync(async (req, res, next) => {
 
         const comment = await Comment.create({
                 content,
-                video: videoId,
+                commentOn: {
+                        type: "Video",
+                        id: videoId,
+                },
                 owner: req.user.id,
         });
 
@@ -52,7 +55,10 @@ export const replyToComment = catchAsync(async (req, res, next) => {
 
         const childComment = await Comment.create({
                 content,
-                video: comment.video,
+                commentOn: {
+                        type: "Video",
+                        id: comment.commentOn.id,
+                },
                 owner: req.user.id,
                 parentComment: comment.parentComment
                         ? comment.parentComment
@@ -138,7 +144,12 @@ export const getAllParentComments = catchAsync(async (req, res, next) => {
         pipeline.push(
                 {
                         $match: {
-                                video: new mongoose.Types.ObjectId(videoId),
+                                commentOn: {
+                                        type: "Video",
+                                        id: new mongoose.Types.ObjectId(
+                                                videoId
+                                        ),
+                                },
                                 parentComment: null,
                         },
                 },
@@ -211,6 +222,7 @@ export const getAllParentComments = catchAsync(async (req, res, next) => {
                                                         replyCount: 1,
                                                         parentComment: 1,
                                                         replyCount: 1,
+                                                        commentOn: 1,
                                                 },
                                         },
                                 ],
@@ -438,5 +450,3 @@ export const getCommentReplies = catchAsync(async (req, res, next) => {
 
         return res.status(200).json({ status: "success", replies });
 });
-
-

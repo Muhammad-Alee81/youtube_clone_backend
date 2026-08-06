@@ -7,10 +7,24 @@ const commentSchema = new mongoose.Schema(
                         required: [true, "comment content is required"],
                 },
 
-                video: {
-                        type: mongoose.Schema.Types.ObjectId,
-                        ref: "Video",
-                        required: [true, "video Id is required"],
+                // video: {
+                //         type: mongoose.Schema.Types.ObjectId,
+                //         ref: "Video",
+                //         required: [true, "video Id is required"],
+                // },
+
+                commentOn: {
+                        type: {
+                                type: String,
+                                enum: ["Video", "Post"],
+                                required: true,
+                        },
+
+                        id: {
+                                type: mongoose.Types.ObjectId,
+                                refPath: "commentOn.type",
+                                required: true,
+                        },
                 },
 
                 owner: {

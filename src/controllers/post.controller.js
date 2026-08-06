@@ -130,5 +130,11 @@ export const updatePost = catchAsync(async (req, res, next) => {
 });
 
 export const getAllPost = catchAsync(async (req, res, next) => {
-        return res.status(200).json({ status: "success" });
+        const posts = await Post.aggregate([
+                {
+                        $match: {},
+                },
+        ]);
+
+        return res.status(200).json({ status: "success", posts });
 });
