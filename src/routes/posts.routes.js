@@ -7,8 +7,16 @@ import {
 } from "../controllers/post.controller.js";
 import { checkAuth } from "../middlewares/auth.middleware.js";
 import upload from "../middlewares/multer.middleware.js";
+import {
+        addCommentOnPost,
+        getAllParentCommentsOnPost,
+} from "../controllers/comment.controller.js";
 
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
+
+router.route("/:postId/comment")
+        .post(checkAuth, addCommentOnPost)
+        .get(getAllParentCommentsOnPost);
 
 router.use(checkAuth);
 

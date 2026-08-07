@@ -3,6 +3,7 @@ import { catchAsync } from "../utils/catch_async.js";
 import ApiError from "../utils/api_error.js";
 import { Video } from "../models/video.model.js";
 import { Comment } from "../models/comments.model.js";
+import { Post } from "../models/posts.model.js";
 
 export const addComment = catchAsync(async (req, res, next) => {
         const { videoId } = req.params;
@@ -382,10 +383,10 @@ export const getCommentReplies = catchAsync(async (req, res, next) => {
                                         {
                                                 $project: {
                                                         content: 1,
-                                                        video: 1,
                                                         owner: 1,
                                                         parentComment: 1,
                                                         replyTo: 1,
+                                                        commentOn: 1,
                                                 },
                                         },
                                 ],
@@ -449,4 +450,109 @@ export const getCommentReplies = catchAsync(async (req, res, next) => {
         const replies = await Comment.aggregate(pipeline);
 
         return res.status(200).json({ status: "success", replies });
+});
+
+// ------------------------------------------------------------
+// Get all Parent coments on Post
+
+/*
+
+postId
+validate
+user validation
+
+post find karain gay
+
+
+
+
+*/
+
+export const addCommentOnPost = catchAsync(async (req, res, next) => {
+        const { postId } = req.params;
+        const { content } = req.body;
+
+        if (!req.user?.id) {
+                return next(new ApiError("unauthorized", 403));
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(postId)) {
+                return next(new ApiError("Invalid Id", 400));
+        }
+
+        const checkPost = await Post.exists({ _id: postId });
+
+        if (!checkPost) {
+                return next(new ApiError("Post not found", 404));
+        }
+
+        if (!content) {
+                return next(new ApiError("comment content is required", 400));
+        }
+
+        const addComment = await Comment.create({
+                content,
+                commentOn: {
+                        type: "Post",
+                        id: postId,
+                },
+                owner: req.user.id,
+        });
+
+        return res.status(201).json({ message: "comment added", addComment });
+});
+
+export const getAllParentCommentsOnPost = catchAsync(async (req, res, next) => {
+        const { postId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(postId)) {
+                return next(new ApiError("Invalid Id", 400));
+        }
+
+        const parentComment = await Comment.aggregate([
+                {
+                        $match: {
+                                commentOn: {
+                                        type: "Post",
+                                        id: new mongoose.Types.ObjectId(postId),
+                                },
+                        },
+                },
+
+                {
+                        $lookup: {
+                                from: "users",
+                                foreignField: "_id",
+                                localField: "owner",
+                                as: "owner",
+
+                                pipeline: [
+                                        {
+                                                $project: {
+                                                        username: 1,
+                                                },
+                                        },
+                                ],
+                        },
+                },
+
+                {
+                        $unwind: "$owner",
+                },
+
+                {
+                        $project: {
+                                content: 1,
+                                commentOn: 1,
+                                owner: 1,
+                                isDeleted: 1,
+                                createdAt: 1,
+                                updatedAt: 1,
+                        },
+                },
+        ]);
+
+        return res
+                .status(200)
+                .json({ status: "success", comments: parentComment });
 });

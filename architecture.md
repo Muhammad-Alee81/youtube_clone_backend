@@ -1,4 +1,4 @@
-// ================= YouTube Like Comments Architecture =================
+// ================= YouTube Comments Architecture =================
 
 /*
 01) Jab koi user kisi video par pehla comment karta hai to ek naya document create hota hai.

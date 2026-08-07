@@ -7,12 +7,6 @@ const commentSchema = new mongoose.Schema(
                         required: [true, "comment content is required"],
                 },
 
-                // video: {
-                //         type: mongoose.Schema.Types.ObjectId,
-                //         ref: "Video",
-                //         required: [true, "video Id is required"],
-                // },
-
                 commentOn: {
                         type: {
                                 type: String,
