@@ -57,7 +57,7 @@ export const replyToComment = catchAsync(async (req, res, next) => {
         const childComment = await Comment.create({
                 content,
                 commentOn: {
-                        type: "Video",
+                        type: comment.commentOn.type,
                         id: comment.commentOn.id,
                 },
                 owner: req.user.id,
@@ -516,6 +516,7 @@ export const getAllParentCommentsOnPost = catchAsync(async (req, res, next) => {
                                         type: "Post",
                                         id: new mongoose.Types.ObjectId(postId),
                                 },
+                                parentComment: null,
                         },
                 },
 
@@ -541,6 +542,23 @@ export const getAllParentCommentsOnPost = catchAsync(async (req, res, next) => {
                 },
 
                 {
+                        $lookup: {
+                                from: "comments",
+                                foreignField: "parentComment",
+                                localField: "_id",
+                                as: "replies",
+                        },
+                },
+
+                {
+                        $addFields: {
+                                replyCount: {
+                                        $size: "$replies",
+                                },
+                        },
+                },
+
+                {
                         $project: {
                                 content: 1,
                                 commentOn: 1,
@@ -548,6 +566,7 @@ export const getAllParentCommentsOnPost = catchAsync(async (req, res, next) => {
                                 isDeleted: 1,
                                 createdAt: 1,
                                 updatedAt: 1,
+                                replyCount: 1,
                         },
                 },
         ]);
