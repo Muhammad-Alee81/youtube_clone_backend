@@ -505,9 +505,16 @@ export const addCommentOnPost = catchAsync(async (req, res, next) => {
 export const getAllParentCommentsOnPost = catchAsync(async (req, res, next) => {
         const { postId } = req.params;
 
+        const { page, limit } = req.validateQuery;
+
         if (!mongoose.Types.ObjectId.isValid(postId)) {
                 return next(new ApiError("Invalid Id", 400));
         }
+
+        // PAGINATION
+        const pageNum = page || 1;
+        const limitNum = limit || 5;
+        const skip = (pageNum - 1) * limitNum;
 
         const parentComment = await Comment.aggregate([
                 {
@@ -521,16 +528,76 @@ export const getAllParentCommentsOnPost = catchAsync(async (req, res, next) => {
                 },
 
                 {
-                        $lookup: {
-                                from: "users",
-                                foreignField: "_id",
-                                localField: "owner",
-                                as: "owner",
+                        $facet: {
+                                matadata: [
+                                        {
+                                                $count: "totalComments",
+                                        },
+                                ],
 
-                                pipeline: [
+                                data: [
+                                        {
+                                                $sort: {
+                                                        createdAt: -1,
+                                                },
+                                        },
+
+                                        {
+                                                $skip: skip,
+                                        },
+
+                                        {
+                                                $limit: limitNum,
+                                        },
+
+                                        {
+                                                $lookup: {
+                                                        from: "users",
+                                                        foreignField: "_id",
+                                                        localField: "owner",
+                                                        as: "owner",
+
+                                                        pipeline: [
+                                                                {
+                                                                        $project: {
+                                                                                username: 1,
+                                                                        },
+                                                                },
+                                                        ],
+                                                },
+                                        },
+
+                                        {
+                                                $unwind: "$owner",
+                                        },
+
+                                        {
+                                                $lookup: {
+                                                        from: "comments",
+                                                        foreignField:
+                                                                "parentComment",
+                                                        localField: "_id",
+                                                        as: "replies",
+                                                },
+                                        },
+
+                                        {
+                                                $addFields: {
+                                                        replyCount: {
+                                                                $size: "$replies",
+                                                        },
+                                                },
+                                        },
+
                                         {
                                                 $project: {
-                                                        username: 1,
+                                                        content: 1,
+                                                        commentOn: 1,
+                                                        owner: 1,
+                                                        isDeleted: 1,
+                                                        createdAt: 1,
+                                                        updatedAt: 1,
+                                                        replyCount: 1,
                                                 },
                                         },
                                 ],
@@ -538,35 +605,50 @@ export const getAllParentCommentsOnPost = catchAsync(async (req, res, next) => {
                 },
 
                 {
-                        $unwind: "$owner",
-                },
-
-                {
-                        $lookup: {
-                                from: "comments",
-                                foreignField: "parentComment",
-                                localField: "_id",
-                                as: "replies",
-                        },
-                },
-
-                {
-                        $addFields: {
-                                replyCount: {
-                                        $size: "$replies",
-                                },
-                        },
-                },
-
-                {
                         $project: {
-                                content: 1,
-                                commentOn: 1,
-                                owner: 1,
-                                isDeleted: 1,
-                                createdAt: 1,
-                                updatedAt: 1,
-                                replyCount: 1,
+                                pagination: {
+                                        totalComments: {
+                                                $ifNull: [
+                                                        {
+                                                                $arrayElemAt: [
+                                                                        "$matadata.totalComments",
+                                                                        0,
+                                                                ],
+                                                        },
+
+                                                        0,
+                                                ],
+                                        },
+
+                                        results: {
+                                                $size: "$data",
+                                        },
+                                        pageSize: {
+                                                $literal: limitNum,
+                                        },
+
+                                        totalPages: {
+                                                $ceil: {
+                                                        $divide: [
+                                                                {
+                                                                        $ifNull: [
+                                                                                {
+                                                                                        $arrayElemAt:
+                                                                                                [
+                                                                                                        "$matadata.totalComments",
+                                                                                                        0,
+                                                                                                ],
+                                                                                },
+                                                                                0,
+                                                                        ],
+                                                                },
+                                                                limitNum,
+                                                        ],
+                                                },
+                                        },
+                                },
+
+                                data: "$data",
                         },
                 },
         ]);

@@ -11,12 +11,14 @@ import {
         addCommentOnPost,
         getAllParentCommentsOnPost,
 } from "../controllers/comment.controller.js";
+import { validation } from "../middlewares/validation.midleware.js";
+import { commentQueryValidation } from "../validators/comment.validators.js";
 
 const router = express.Router({ mergeParams: true });
 
 router.route("/:postId/comment")
         .post(checkAuth, addCommentOnPost)
-        .get(getAllParentCommentsOnPost);
+        .get(validation(commentQueryValidation), getAllParentCommentsOnPost);
 
 router.use(checkAuth);
 
