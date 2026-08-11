@@ -9,6 +9,7 @@ import videoRouter from "./routes/video.routes.js";
 import playlistRouter from "./routes/playlist.routes.js";
 import commentRouter from "./routes/comment.routes.js";
 import postRouter from "./routes/posts.routes.js";
+import likeRouter from "./routes/like.route.js";
 
 const app = express();
 
@@ -35,5 +36,8 @@ app.use("/api/v1/comments", commentRouter);
 
 // POSTS ROUTES
 app.use("/api/v1/posts", postRouter);
+
+// LIKES ROUTES
+app.use("/api/v1/likes", likeRouter);
 
 export { app };

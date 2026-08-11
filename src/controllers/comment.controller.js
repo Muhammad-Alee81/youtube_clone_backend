@@ -657,3 +657,5 @@ export const getAllParentCommentsOnPost = catchAsync(async (req, res, next) => {
                 .status(200)
                 .json({ status: "success", comments: parentComment });
 });
+
+
