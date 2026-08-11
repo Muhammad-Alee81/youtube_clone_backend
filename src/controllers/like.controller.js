@@ -3,6 +3,8 @@ import { catchAsync } from "../utils/catch_async.js";
 import ApiError from "../utils/api_error.js";
 import { Video } from "../models/video.model.js";
 import { Like } from "../models/Likes.model.js";
+import { Comment } from "../models/comments.model.js";
+import { Post } from "../models/posts.model.js";
 
 export const toggleVideoLike = catchAsync(async (req, res, next) => {
         const { videoId } = req.params;
@@ -37,3 +39,75 @@ export const toggleVideoLike = catchAsync(async (req, res, next) => {
 
         return res.status(200).json({ status: "success" });
 });
+
+export const toggleCommentLike = catchAsync(async (req, res, next) => {
+        const { commentId } = req.params;
+
+        if (!req.user?.id) {
+                return next(new ApiError("unauthorized", 400));
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(commentId)) {
+                return next(new ApiError("Invalid Id", 400));
+        }
+
+        const comment = await Comment.exists(
+                new mongoose.Types.ObjectId(commentId)
+        );
+
+        if (!comment) {
+                return next(new ApiError("Comment not found", 404));
+        }
+
+        const checkLike = await Like.findOne({
+                comment: commentId,
+                likedBy: req.user.id,
+        });
+
+        if (checkLike) {
+                await Like.findByIdAndDelete(checkLike._id);
+        } else {
+                await Like.create({
+                        comment: commentId,
+                        likedBy: req.user.id,
+                });
+        }
+
+        return res.status(200).json({ status: "success" });
+});
+
+export const togglePostLike = catchAsync(async (req, res, next) => {
+        const { postId } = req.params;
+
+        if (!req.user?.id) {
+                return next(new ApiError("unauthorized", 400));
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(postId)) {
+                return next(new ApiError("Invalid Id", 400));
+        }
+
+        const post = await Post.exists(new mongoose.Types.ObjectId(postId));
+
+        if (!post) {
+                return next(new ApiError("Post not found", 404));
+        }
+
+        const checkLike = await Like.findOne({
+                post: postId,
+                likedBy: req.user.id,
+        });
+
+        if (checkLike) {
+                await Like.findByIdAndDelete(checkLike._id);
+        } else {
+                await Like.create({
+                        post: postId,
+                        likedBy: req.user.id,
+                });
+        }
+
+        return res.status(200).json({ status: "success" });
+});
+
+export const getAllLikedVideos = catchAsync(async (req, res, next) => {});
