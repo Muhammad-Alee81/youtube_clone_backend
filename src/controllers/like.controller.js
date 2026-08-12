@@ -110,4 +110,74 @@ export const togglePostLike = catchAsync(async (req, res, next) => {
         return res.status(200).json({ status: "success" });
 });
 
-export const getAllLikedVideos = catchAsync(async (req, res, next) => {});
+export const getAllLikedVideos = catchAsync(async (req, res, next) => {
+        if (!req.user?.id) {
+                return next(new ApiError("unauthorized", 403));
+        }
+
+        const likedVideos = await Like.aggregate([
+                {
+                        $match: {
+                                likedBy: new mongoose.Types.ObjectId(
+                                        req.user.id
+                                ),
+                        },
+                },
+
+                {
+                        $lookup: {
+                                from: "videos",
+                                foreignField: "_id",
+                                localField: "video",
+                                as: "videos",
+                                pipeline: [
+                                        {
+                                                $lookup: {
+                                                        from: "users",
+                                                        foreignField: "_id",
+                                                        localField: "owner",
+                                                        as: "owner",
+                                                        pipeline: [
+                                                                {
+                                                                        $project: {
+                                                                                username: 1,
+                                                                        },
+                                                                },
+                                                        ],
+                                                },
+                                        },
+
+                                        {
+                                                $unwind: "$owner",
+                                        },
+
+                                        {
+                                                $project: {
+                                                        title: 1,
+                                                        description: 1,
+                                                        thumbnail: 1,
+                                                        owner: 1,
+                                                        createdAt: 1,
+                                                        updatedAt: 1,
+                                                        views: 1,
+                                                },
+                                        },
+                                ],
+                        },
+                },
+
+                {
+                        $unwind: "$videos",
+                },
+
+                {
+                        $project: {
+                                video: 1,
+                                likedBy: 1,
+                                videos: 1,
+                        },
+                },
+        ]);
+
+        return res.status(200).json({ status: "success", likedVideos });
+});
