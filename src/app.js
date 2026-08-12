@@ -10,6 +10,7 @@ import playlistRouter from "./routes/playlist.routes.js";
 import commentRouter from "./routes/comment.routes.js";
 import postRouter from "./routes/posts.routes.js";
 import likeRouter from "./routes/like.route.js";
+import historyRouter from "./routes/history.routes.js";
 
 const app = express();
 
@@ -39,5 +40,8 @@ app.use("/api/v1/posts", postRouter);
 
 // LIKES ROUTES
 app.use("/api/v1/likes", likeRouter);
+
+// WATCH HISTORY ROUTES
+app.use("/api/v1/watch-history", historyRouter);
 
 export { app };

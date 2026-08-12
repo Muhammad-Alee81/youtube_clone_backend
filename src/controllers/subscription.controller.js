@@ -5,74 +5,85 @@ import { catchAsync } from "../utils/catch_async.js";
 import mongoose from "mongoose";
 
 export const subscribeChannel = catchAsync(async (req, res, next) => {
-       const subscriber = req.user?.id;
-       const { channelId } = req.params;
+        // sab sy pehly user kee id lain gay joo subscribe kr raha h channel koo
+        const subscriber = req.user?.id;
+        // phir channel kee id lain gay
+        const { channelId } = req.params;
 
-       if (!channelId) {
-              return next(new ApiError("channel ID is required", 400));
-       }
+        //  channel kee ID kee validation karain gay
+        if (!channelId) {
+                return next(new ApiError("channel ID is required", 400));
+        }
 
-       if (!mongoose.Types.ObjectId.isValid(channelId)) {
-              return next(new ApiError("Invalid channel ID", 400));
-       }
+        if (!mongoose.Types.ObjectId.isValid(channelId)) {
+                return next(new ApiError("Invalid channel ID", 400));
+        }
 
-       if (subscriber.toString() === channelId) {
-              return next(
-                     new ApiError("you cannot subscribe your own channel", 400)
-              );
-       }
+        //  check krna subscriber or channel id agr same h tou error return krna
+        if (subscriber.toString() === channelId) {
+                return next(
+                        new ApiError(
+                                "you cannot subscribe your own channel",
+                                400
+                        )
+                );
+        }
 
-       const channel = await User.findById(channelId);
+        //  check krna k channel exist krta h ya nhi agr nhi krta tou error doo
+        const channel = await User.findById(channelId);
 
-       if (!channel) {
-              return next(new ApiError("channel not found", 404));
-       }
+        if (!channel) {
+                return next(new ApiError("channel not found", 404));
+        }
 
-       const checkAlreadySubscribe = await Subscription.findOne({
-              subscriber: req.user?.id,
-              channel: channelId,
-       });
+        const checkAlreadySubscribe = await Subscription.findOne({
+                subscriber: req.user?.id,
+                channel: channelId,
+        });
 
-       if (checkAlreadySubscribe) {
-              return next(
-                     new ApiError("Already subscribed to this channel", 409)
-              );
-       }
+        if (checkAlreadySubscribe) {
+                return next(
+                        new ApiError("Already subscribed to this channel", 409)
+                );
+        }
 
-       const subscribe = await Subscription.create({
-              subscriber,
-              channel: channelId,
-       });
+        const subscribe = await Subscription.create({
+                subscriber,
+                channel: channelId,
+        });
 
-       return res
-              .status(201)
-              .json({ message: "channel Subscribed", data: subscribe });
+        return res
+                .status(201)
+                .json({ message: "channel Subscribed", data: subscribe });
 });
 
 export const unSubscribeChannel = catchAsync(async (req, res, next) => {
-       const { channelId } = req.params;
-       const subscriber = req.user?.id;
+        const { channelId } = req.params;
+        const subscriber = req.user?.id;
 
-       if (!channelId) {
-              return next(new ApiError("channel ID is required", 400));
-       }
+        if (!channelId) {
+                return next(new ApiError("channel ID is required", 400));
+        }
 
-       if (!mongoose.Types.ObjectId.isValid(channelId)) {
-              return next(new ApiError("Invalid channel ID", 400));
-       }
+        if (!mongoose.Types.ObjectId.isValid(channelId)) {
+                return next(new ApiError("Invalid channel ID", 400));
+        }
 
-       const unSubscribe = await Subscription.findOneAndDelete({
-              subscriber,
-              channel: channelId,
-       });
+        const unSubscribe = await Subscription.findOneAndDelete({
+                subscriber,
+                channel: channelId,
+        });
 
-       if (!unSubscribe) {
-              return next(
-                     new ApiError("you are not subscribed to this channel", 404)
-              );
-       }
+        if (!unSubscribe) {
+                return next(
+                        new ApiError(
+                                "you are not subscribed to this channel",
+                                404
+                        )
+                );
+        }
 
-       return res
-              .status(200)
-              .json({ message: "channel unsubscribed", data: unSubscribe });
+        return res
+                .status(200)
+                .json({ message: "channel unsubscribed", data: unSubscribe });
 });
