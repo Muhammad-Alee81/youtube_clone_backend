@@ -72,3 +72,21 @@ export const removeVideoFromHistory = catchAsync(async (req, res, next) => {
                 .status(200)
                 .json({ message: "video removed from watch History" });
 });
+
+export const clearAllWatchHistory = catchAsync(async (req, res, next) => {
+        if (!req.user?.id) {
+                return next(new ApiError("unauthorized", 401));
+        }
+
+        const clearHistory = await WatchHistory.deleteMany({
+                user: req.user?.id,
+        });
+
+        if (clearHistory.deletedCount === 0) {
+                return next(new ApiError("No history found", 404));
+        }
+
+        return res
+                .status(200)
+                .json({ message: "All watch history cleared successfully" });
+});
