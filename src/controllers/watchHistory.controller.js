@@ -90,3 +90,69 @@ export const clearAllWatchHistory = catchAsync(async (req, res, next) => {
                 .status(200)
                 .json({ message: "All watch history cleared successfully" });
 });
+
+export const getUsersWatchHistory = catchAsync(async (req, res, next) => {
+        if (!req.user?.id) {
+                return next(new ApiError("unauthorized", 401));
+        }
+
+        const watchHistory = await WatchHistory.aggregate([
+                {
+                        $match: {
+                                user: new mongoose.Types.ObjectId(req.user.id),
+                        },
+                },
+
+                {
+                        $sort: {
+                                watchedAt: -1,
+                        },
+                },
+
+                {
+                        $lookup: {
+                                from: "videos",
+                                foreignField: "_id",
+                                localField: "video",
+                                as: "videos",
+                                pipeline: [
+                                        {
+                                                $project: {
+                                                        title: 1,
+                                                        thumbnail: 1,
+                                                        videoFile: 1,
+                                                        duration: 1,
+                                                        views: 1,
+                                                        owner: 1,
+                                                },
+                                        },
+                                        {
+                                                $lookup: {
+                                                        from: "users",
+                                                        foreignField: "_id",
+                                                        localField: "owner",
+                                                        as: "owner",
+                                                        pipeline: [
+                                                                {
+                                                                        $project: {
+                                                                                username: 1,
+                                                                                fullName: 1,
+                                                                        },
+                                                                },
+                                                        ],
+                                                },
+                                        },
+
+                                        {
+                                                $unwind: "$owner",
+                                        },
+                                ],
+                        },
+                },
+                {
+                        $unwind: "$videos",
+                },
+        ]);
+
+        return res.status(200).json({ status: "success", watchHistory });
+});
