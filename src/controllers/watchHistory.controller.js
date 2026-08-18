@@ -102,7 +102,7 @@ export const getUsersWatchHistory = catchAsync(async (req, res, next) => {
         const limitNum = limit || 10;
         const skip = (pageNum - 1) * limitNum;
 
-        const watchHistory = await WatchHistory.aggregate([
+        const watchHistory = await WatchHistory.aggregate(
                 {
                         $match: {
                                 user: new mongoose.Types.ObjectId(req.user.id),
