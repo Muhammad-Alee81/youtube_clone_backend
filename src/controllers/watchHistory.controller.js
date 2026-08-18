@@ -92,9 +92,15 @@ export const clearAllWatchHistory = catchAsync(async (req, res, next) => {
 });
 
 export const getUsersWatchHistory = catchAsync(async (req, res, next) => {
+        const { page, limit } = req.validateQuery;
+
         if (!req.user?.id) {
                 return next(new ApiError("unauthorized", 401));
         }
+
+        const pageNum = page || 1;
+        const limitNum = limit || 10;
+        const skip = (pageNum - 1) * limitNum;
 
         const watchHistory = await WatchHistory.aggregate([
                 {
@@ -104,53 +110,121 @@ export const getUsersWatchHistory = catchAsync(async (req, res, next) => {
                 },
 
                 {
-                        $sort: {
-                                watchedAt: -1,
-                        },
-                },
-
-                {
-                        $lookup: {
-                                from: "videos",
-                                foreignField: "_id",
-                                localField: "video",
-                                as: "videos",
-                                pipeline: [
+                        $facet: {
+                                matadata: [
                                         {
-                                                $project: {
-                                                        title: 1,
-                                                        thumbnail: 1,
-                                                        videoFile: 1,
-                                                        duration: 1,
-                                                        views: 1,
-                                                        owner: 1,
+                                                $count: "totalHistory",
+                                        },
+                                ],
+                                data: [
+                                        {
+                                                $sort: {
+                                                        watchedAt: -1,
                                                 },
                                         },
+
+                                        {
+                                                $skip: skip,
+                                        },
+
+                                        {
+                                                $limit: limitNum,
+                                        },
+
                                         {
                                                 $lookup: {
-                                                        from: "users",
+                                                        from: "videos",
                                                         foreignField: "_id",
-                                                        localField: "owner",
-                                                        as: "owner",
+                                                        localField: "video",
+                                                        as: "videos",
                                                         pipeline: [
                                                                 {
                                                                         $project: {
-                                                                                username: 1,
-                                                                                fullName: 1,
+                                                                                title: 1,
+                                                                                thumbnail: 1,
+                                                                                videoFile: 1,
+                                                                                duration: 1,
+                                                                                views: 1,
+                                                                                owner: 1,
                                                                         },
+                                                                },
+                                                                {
+                                                                        $lookup: {
+                                                                                from: "users",
+                                                                                foreignField:
+                                                                                        "_id",
+                                                                                localField: "owner",
+                                                                                as: "owner",
+                                                                                pipeline: [
+                                                                                        {
+                                                                                                $project: {
+                                                                                                        username: 1,
+                                                                                                        fullName: 1,
+                                                                                                },
+                                                                                        },
+                                                                                ],
+                                                                        },
+                                                                },
+
+                                                                {
+                                                                        $unwind: "$owner",
                                                                 },
                                                         ],
                                                 },
                                         },
-
                                         {
-                                                $unwind: "$owner",
+                                                $unwind: "$videos",
                                         },
                                 ],
                         },
                 },
+
                 {
-                        $unwind: "$videos",
+                        $project: {
+                                pagination: {
+                                        totalHistory: {
+                                                $ifNull: [
+                                                        {
+                                                                $arrayElemAt: [
+                                                                        "$matadata.totalHistory",
+                                                                        0,
+                                                                ],
+                                                        },
+
+                                                        0,
+                                                ],
+                                        },
+
+                                        results: {
+                                                $size: "$data",
+                                        },
+                                        pageSize: {
+                                                $literal: limitNum,
+                                        },
+
+                                        totalPages: {
+                                                $ceil: {
+                                                        $divide: [
+                                                                {
+                                                                        $ifNull: [
+                                                                                {
+                                                                                        $arrayElemAt:
+                                                                                                [
+                                                                                                        "$matadata.totalComments",
+                                                                                                        0,
+                                                                                                ],
+                                                                                },
+                                                                                0,
+                                                                        ],
+                                                                },
+                                                                limitNum,
+                                                        ],
+                                                },
+                                        },
+                                },
+
+                                data: "$data",
+                        },
                 },
         ]);
 
