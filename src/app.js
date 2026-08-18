@@ -11,6 +11,7 @@ import commentRouter from "./routes/comment.routes.js";
 import postRouter from "./routes/posts.routes.js";
 import likeRouter from "./routes/like.route.js";
 import historyRouter from "./routes/history.routes.js";
+import dashboardRouter from "./routes/dashboard.routes.js";
 
 const app = express();
 
@@ -43,5 +44,11 @@ app.use("/api/v1/likes", likeRouter);
 
 // WATCH HISTORY ROUTES
 app.use("/api/v1/watch-history", historyRouter);
+
+// DASHBOARD ROUTES
+app.use("/api/v1/dashboard", dashboardRouter);
+
+
+
 
 export { app };
