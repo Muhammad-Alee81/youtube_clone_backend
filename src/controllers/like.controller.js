@@ -30,11 +30,20 @@ export const toggleVideoLike = catchAsync(async (req, res, next) => {
 
         if (checkLike) {
                 await Like.findByIdAndDelete(checkLike._id);
+                await Video.findByIdAndUpdate(
+                        { _id: videoId },
+                        { $inc: { likesCount: -1 } }
+                );
         } else {
                 await Like.create({
                         video: videoId,
                         likedBy: req.user.id,
                 });
+
+                await Video.findByIdAndUpdate(
+                        { _id: videoId },
+                        { $inc: { likesCount: 1 } }
+                );
         }
 
         return res.status(200).json({ status: "success" });

@@ -277,6 +277,9 @@ export const getVideoById = catchAsync(async (req, res, next) => {
                                 ],
                         },
                 },
+                {
+                        $unwind: "$owner",
+                },
         ]);
 
         if (!video) {
@@ -386,4 +389,3 @@ export const togglePublishStatus = catchAsync(async (req, res, next) => {
                 video,
         });
 });
-

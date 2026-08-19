@@ -33,6 +33,15 @@ export const addComment = catchAsync(async (req, res, next) => {
                 owner: req.user.id,
         });
 
+        await Video.findByIdAndUpdate(
+                { _id: videoId },
+                {
+                        $inc: {
+                                commentsCount: 1,
+                        },
+                }
+        );
+
         return res.status(201).json({ status: "success", comment });
 });
 
@@ -114,6 +123,22 @@ export const deleteComment = catchAsync(async (req, res, next) => {
         if (!deletedComment) {
                 return next(new ApiError("Comment not Found", 404));
         }
+
+        if (deletedComment.commentOn.type !== "Video") {
+                return next(new ApiError("Invalid comment target", 400));
+        }
+
+        const videoId = deletedComment.commentOn.id;
+
+        const video = await Video.exists({
+                _id: videoId,
+        });
+
+        if (!video) {
+                return next(new ApiError("video not found", 404));
+        }
+
+        await Video.findByIdAndUpdate(videoId, { $inc: { commentsCount: -1 } });
 
         return res.status(200).json({
                 message: "comment deleted successfully",
@@ -657,5 +682,3 @@ export const getAllParentCommentsOnPost = catchAsync(async (req, res, next) => {
                 .status(200)
                 .json({ status: "success", comments: parentComment });
 });
-
-

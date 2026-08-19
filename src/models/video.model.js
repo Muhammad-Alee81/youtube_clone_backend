@@ -16,51 +16,61 @@ duration
 */
 
 const videoSchema = new mongoose.Schema(
-       {
-              title: {
-                     type: String,
-                     trim: true,
-                     required: true,
-              },
+        {
+                title: {
+                        type: String,
+                        trim: true,
+                        required: true,
+                },
 
-              description: {
-                     type: String,
-                     trim: true,
-                     required: true,
-              },
+                description: {
+                        type: String,
+                        trim: true,
+                        required: true,
+                },
 
-              thumbnail: {
-                     url: String,
-                     publicId: String,
-              },
+                thumbnail: {
+                        url: String,
+                        publicId: String,
+                },
 
-              videoFile: {
-                     url: String,
-                     publicId: String,
-              },
+                videoFile: {
+                        url: String,
+                        publicId: String,
+                },
 
-              duration: {
-                     type: Number,
-                     required: [true, "video duration is required"],
-              },
+                duration: {
+                        type: Number,
+                        required: [true, "video duration is required"],
+                },
 
-              views: {
-                     type: Number,
-                     default: 0,
-              },
+                views: {
+                        type: Number,
+                        default: 0,
+                },
 
-              owner: {
-                     type: mongoose.Schema.ObjectId,
-                     ref: "User",
-              },
+                likesCount: {
+                        type: Number,
+                        default: 0,
+                },
 
-              isPublished: {
-                     type: Boolean,
-                     default: true,
-              },
-       },
+                commentsCount: {
+                        type: Number,
+                        default: 0,
+                },
 
-       { timestamps: true }
+                owner: {
+                        type: mongoose.Schema.ObjectId,
+                        ref: "User",
+                },
+
+                isPublished: {
+                        type: Boolean,
+                        default: true,
+                },
+        },
+
+        { timestamps: true }
 );
 
 export const Video = mongoose.model("Video", videoSchema);
