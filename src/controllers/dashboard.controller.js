@@ -113,3 +113,18 @@ export const getTopVideos = catchAsync(async (req, res, next) => {
                 topViewedVideos,
         });
 });
+
+export const getRecentVideos = catchAsync(async (req, res, next) => {
+        if (!req.user?.id) {
+                return next(new ApiError("unauthorized", 401));
+        }
+
+        const recentVideos = await Video.find({ owner: req.user.id })
+                .sort({
+                        createdAt: -1,
+                })
+                .select("-__v -updatedAt -owner -videoFile -description")
+                .limit(5);
+
+        return res.status(200).json({ status: "success", recentVideos });
+});
