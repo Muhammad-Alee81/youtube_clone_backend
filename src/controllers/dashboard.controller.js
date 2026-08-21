@@ -67,7 +67,7 @@ top videos lenay k liye mughay
 sab sy pehly videos ka raw data nikalna hoo ga time period k hisaab sy like agr last 7 days
 
 */
-export const getTopViewedVideos = catchAsync(async (req, res, next) => {
+export const getTopVideos = catchAsync(async (req, res, next) => {
         const { sort } = req.validateQuery;
 
         if (!sort) {
