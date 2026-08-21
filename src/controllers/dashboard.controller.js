@@ -67,164 +67,49 @@ top videos lenay k liye mughay
 sab sy pehly videos ka raw data nikalna hoo ga time period k hisaab sy like agr last 7 days
 
 */
-export const getTopVideos = catchAsync(async (req, res, next) => {
+export const getTopViewedVideos = catchAsync(async (req, res, next) => {
+        const { sort } = req.validateQuery;
+
+        if (!sort) {
+                return next(new ApiError("error here", 500));
+        }
+
         if (!req.user?.id) {
                 return next(new ApiError("unauthorized", 401));
         }
 
-        const topVideos = await Video.aggregate([
-                // 1. Get user's videos
+        const topViewedVideos = await Video.aggregate([
                 {
                         $match: {
                                 owner: new mongoose.Types.ObjectId(req.user.id),
                         },
                 },
 
-                // 2. Find maximum values
-                {
-                        $group: {
-                                _id: null,
-
-                                videos: {
-                                        $push: "$$ROOT",
-                                },
-
-                                maxViews: {
-                                        $max: {
-                                                $ifNull: ["$views", 0],
-                                        },
-                                },
-
-                                maxLikes: {
-                                        $max: {
-                                                $ifNull: ["$likesCount", 0],
-                                        },
-                                },
-
-                                maxComments: {
-                                        $max: {
-                                                $ifNull: ["$commentsCount", 0],
-                                        },
-                                },
-                        },
-                },
-
-                // 3. Convert videos array back into documents
-                {
-                        $unwind: "$videos",
-                },
-
-                // 4. Normalize metrics
-                {
-                        $set: {
-                                normalizedViews: {
-                                        $divide: [
-                                                {
-                                                        $ifNull: [
-                                                                "$videos.views",
-                                                                0,
-                                                        ],
-                                                },
-                                                {
-                                                        $max: ["$maxViews", 1],
-                                                },
-                                        ],
-                                },
-
-                                normalizedLikes: {
-                                        $divide: [
-                                                {
-                                                        $ifNull: [
-                                                                "$videos.likesCount",
-                                                                0,
-                                                        ],
-                                                },
-                                                {
-                                                        $max: ["$maxLikes", 1],
-                                                },
-                                        ],
-                                },
-
-                                normalizedComments: {
-                                        $divide: [
-                                                {
-                                                        $ifNull: [
-                                                                "$videos.commentsCount",
-                                                                0,
-                                                        ],
-                                                },
-                                                {
-                                                        $max: [
-                                                                "$maxComments",
-                                                                1,
-                                                        ],
-                                                },
-                                        ],
-                                },
-                        },
-                },
-
-                // 5. Calculate ranking score
-                {
-                        $set: {
-                                score: {
-                                        $round: [
-                                                {
-                                                        $add: [
-                                                                {
-                                                                        $multiply: [
-                                                                                "$normalizedViews",
-                                                                                0.5,
-                                                                        ],
-                                                                },
-                                                                {
-                                                                        $multiply: [
-                                                                                "$normalizedLikes",
-                                                                                0.3,
-                                                                        ],
-                                                                },
-                                                                {
-                                                                        $multiply: [
-                                                                                "$normalizedComments",
-                                                                                0.2,
-                                                                        ],
-                                                                },
-                                                        ],
-                                                },
-                                                2,
-                                        ],
-                                },
-                        },
-                },
-
-                // 6. Highest score first
                 {
                         $sort: {
-                                score: -1,
+                                [sort]: -1,
                         },
                 },
 
-                // 7. Top 5
                 {
                         $limit: 5,
                 },
 
-                // 8. Return only required fields
                 {
                         $project: {
-                                _id: "$videos._id",
-                                title: "$videos.title",
-                                thumbnail: "$videos.thumbnail",
-                                views: "$videos.views",
-                                likesCount: "$videos.likesCount",
-                                commentsCount: "$videos.commentsCount",
-                                score: 1,
+                                title: 1,
+                                description: 1,
+                                thumbnail: 1,
+                                createdAt: 1,
+                                views: 1,
+                                likesCount: 1,
+                                commentsCount: 1,
                         },
                 },
         ]);
 
         return res.status(200).json({
                 message: "User top videos fetched successfully",
-                topVideos,
+                topViewedVideos,
         });
 });
