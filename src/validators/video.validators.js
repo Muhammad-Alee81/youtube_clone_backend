@@ -1,7 +1,13 @@
 import * as z from "zod";
 
+const booleanQuery = z.preprocess((value) => {
+        if (value === "true") return true;
+        if (value === "false") return false;
+        return value;
+}, z.boolean());
+
 export const getAllVideoQueryValidate = z.object({
-        isPublished: z.coerce.boolean().optional(),
+        isPublished: booleanQuery.optional(),
         title: z.coerce.string().optional(),
         likesCount: z.coerce.number().optional(),
         commentsCount: z.coerce.number().optional(),

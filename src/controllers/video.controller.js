@@ -390,6 +390,31 @@ export const togglePublishStatus = catchAsync(async (req, res, next) => {
         });
 });
 
+
+
+/*
+--------------------------------------------------
+DASHBOARD VIDEO PAGE APIS
+----------------------------------------------------
+
+PAGINATION:
+http://localhost:4000/api/v1/videos/my/videos?page=1&limit=2
+
+FILTERS:
+http://localhost:4000/api/v1/videos/my/videos?views[gt]=79
+
+SORTING:(sorting by default newest to oldest video)
+http://localhost:4000/api/v1/videos/my/videos?sort=createdAt
+
+PUBLISH STATUS:
+http://localhost:4000/api/v1/videos/my/videos?isPublished=false
+
+BY DEFAULT VIDEOS:
+http://localhost:4000/api/v1/videos/my/videos
+
+
+*/
+
 export const myVideos = catchAsync(async (req, res, next) => {
         const { page, limit, sort, ...filters } = req.validateQuery;
 
@@ -399,9 +424,17 @@ export const myVideos = catchAsync(async (req, res, next) => {
 
         const pipeline = [];
 
-        if (filters) {
+        // ADVANCED FILTERING
+        let queryStr = JSON.stringify(filters);
+
+        queryStr = queryStr.replace(
+                /\b(gt|lt|lte|gte)\b/g,
+                (match) => `$${match}`
+        );
+
+        if (Object.keys(filters).length) {
                 pipeline.push({
-                        $match: filters,
+                        $match: JSON.parse(queryStr),
                 });
         }
 
