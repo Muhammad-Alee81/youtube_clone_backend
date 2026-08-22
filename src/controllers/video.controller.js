@@ -390,8 +390,6 @@ export const togglePublishStatus = catchAsync(async (req, res, next) => {
         });
 });
 
-
-
 /*
 --------------------------------------------------
 DASHBOARD VIDEO PAGE APIS
@@ -411,6 +409,29 @@ http://localhost:4000/api/v1/videos/my/videos?isPublished=false
 
 BY DEFAULT VIDEOS:
 http://localhost:4000/api/v1/videos/my/videos
+
+
+----------------------------------------------------------------------------------
+GET MOST VIEWED VIDEOS: (for dashboard overview page)
+-----------------------------------------------------------------------------------
+http://localhost:4000/api/v1/videos/my/video?ssort=-views&limit=5
+
+GET MOST LIKED VIDEOS
+http://localhost:4000/api/v1/videos/my/video?ssort=-likesCount&limit=5
+
+GET MOST Commented VIDEOS
+http://localhost:4000/api/v1/videos/my/video?ssort=-commentsCount&limit=5
+
+----------------------------------------------------------------------------------
+GET RECENT UPLOADED VIDEOS: (for dashboard overview page)
+----------------------------------------------------------------------------------- 
+http://localhost:4000/api/v1/videos/my/videos?sort=-createdAt&limit=5
+
+
+
+
+
+
 
 
 */
