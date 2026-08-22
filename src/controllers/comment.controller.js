@@ -682,3 +682,7 @@ export const getAllParentCommentsOnPost = catchAsync(async (req, res, next) => {
                 .status(200)
                 .json({ status: "success", comments: parentComment });
 });
+
+
+// get all comments of Authenticated user on his all uploaded videos 
+

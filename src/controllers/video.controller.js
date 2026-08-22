@@ -389,3 +389,131 @@ export const togglePublishStatus = catchAsync(async (req, res, next) => {
                 video,
         });
 });
+
+export const myVideos = catchAsync(async (req, res, next) => {
+        const { page, limit, sort, ...filters } = req.validateQuery;
+
+        if (!req.user?.id) {
+                return next(new ApiError("unauthorized", 401));
+        }
+
+        const pipeline = [];
+
+        if (filters) {
+                pipeline.push({
+                        $match: filters,
+                });
+        }
+
+        if (sort) {
+                const sortFields = sort.split(",");
+                const sortObj = {};
+
+                sortFields.forEach((field) => {
+                        if (field.startsWith("-")) {
+                                sortObj[field.slice(1)] = -1;
+                        } else {
+                                sortObj[field] = 1;
+                        }
+                });
+
+                pipeline.push({
+                        $sort: sortObj,
+                });
+        } else {
+                pipeline.push({
+                        $sort: {
+                                createdAt: -1,
+                        },
+                });
+        }
+
+        // PAGINATION
+        const pageNum = page || 1;
+        const limitNum = limit || 10;
+        const skip = (pageNum - 1) * limitNum;
+
+        pipeline.push(
+                {
+                        $match: {
+                                owner: new mongoose.Types.ObjectId(req.user.id),
+                        },
+                },
+
+                {
+                        $facet: {
+                                matadata: [{ $count: "totalVideos" }],
+                                data: [
+                                        {
+                                                $skip: skip,
+                                        },
+
+                                        {
+                                                $limit: limitNum,
+                                        },
+
+                                        {
+                                                $project: {
+                                                        title: 1,
+                                                        thumbnail: 1,
+                                                        duration: 1,
+                                                        createdAt: 1,
+                                                        views: 1,
+                                                        likesCount: 1,
+                                                        commentsCount: 1,
+                                                        isPublished: 1,
+                                                },
+                                        },
+                                ],
+                        },
+                },
+
+                {
+                        $project: {
+                                totalVideos: {
+                                        $ifNull: [
+                                                {
+                                                        $arrayElemAt: [
+                                                                "$matadata.totalVideos",
+                                                                0,
+                                                        ],
+                                                },
+                                                0,
+                                        ],
+                                },
+
+                                result: {
+                                        $size: "$data",
+                                },
+
+                                currentPage: {
+                                        $literal: pageNum,
+                                },
+
+                                pageSize: {
+                                        $literal: limitNum,
+                                },
+
+                                totalPages: {
+                                        $ceil: {
+                                                $divide: [
+                                                        {
+                                                                $arrayElemAt: [
+                                                                        "$matadata.totalVideos",
+                                                                        0,
+                                                                ],
+                                                        },
+                                                        limitNum,
+                                                ],
+                                        },
+                                },
+
+                                videos: "$data",
+                        },
+                }
+        );
+
+        const videos = await Video.aggregate(pipeline);
+
+        return res.status(200).json({ status: "suceess", videos });
+});

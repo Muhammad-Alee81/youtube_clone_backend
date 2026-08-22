@@ -10,7 +10,6 @@ import {
         updateAvatar,
         updateCoverImage,
         updateProfile,
-        getUsersWatchHistory,
 } from "../controllers/user.controller.js";
 
 import playlistRouter from "../routes/playlist.routes.js";
@@ -42,7 +41,6 @@ router.route("/update-cover-image").patch(
         updateCoverImage
 );
 
-router.route("/feed/history").get(checkAuth, getUsersWatchHistory);
 router.route("/:username").get(checkAuth, getUserChannelProfileDetails);
 
 export default router;

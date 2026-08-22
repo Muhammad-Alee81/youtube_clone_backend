@@ -4,15 +4,7 @@ import { Video } from "../models/video.model.js";
 import { Subscription } from "../models/subscription.model.js";
 
 import mongoose from "mongoose";
-/*
 
-1) total views 
-2) total videos
-3) total subscribers
-4) total likes 
-5)total comments
-
-*/
 export const getStats = catchAsync(async (req, res, next) => {
         if (!req.user?.id) {
                 return next(new ApiError("unauthorized", 401));
@@ -60,13 +52,6 @@ export const getStats = catchAsync(async (req, res, next) => {
         });
 });
 
-/*
-
-top videos lenay k liye mughay 
-
-sab sy pehly videos ka raw data nikalna hoo ga time period k hisaab sy like agr last 7 days
-
-*/
 export const getTopVideos = catchAsync(async (req, res, next) => {
         const { sort } = req.validateQuery;
 
