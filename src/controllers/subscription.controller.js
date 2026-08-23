@@ -87,3 +87,61 @@ export const unSubscribeChannel = catchAsync(async (req, res, next) => {
                 .status(200)
                 .json({ message: "channel unsubscribed", data: unSubscribe });
 });
+
+export const recentSubscribers = catchAsync(async (req, res, next) => {
+        if (!req.user?.id) {
+                return next(new ApiError("unauthorized", 401));
+        }
+
+        const recentSubscribers = await Subscription.aggregate([
+                {
+                        $match: {
+                                channel: new mongoose.Types.ObjectId(
+                                        req.user.id
+                                ),
+                        },
+                },
+
+                {
+                        $sort: {
+                                createdAt: -1,
+                        },
+                },
+
+                {
+                        $limit: 3,
+                },
+
+                {
+                        $lookup: {
+                                from: "users",
+                                foreignField: "_id",
+                                localField: "subscriber",
+                                as: "subscribers",
+                                pipeline: [
+                                        {
+                                                $project: {
+                                                        username: 1,
+                                                        email: 1,
+                                                        fullName: 1,
+                                                        avatar: 1,
+                                                },
+                                        },
+                                ],
+                        },
+                },
+
+                {
+                        $unwind: "$subscribers",
+                },
+
+                {
+                        $project: {
+                                createdAt: 1,
+                                subscribers: 1,
+                        },
+                },
+        ]);
+
+        return res.status(200).json({ status: "success", recentSubscribers });
+});
