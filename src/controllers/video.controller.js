@@ -10,6 +10,9 @@ import {
 } from "../utils/cloudinary.js";
 import { deleteLocalTempFiles } from "../utils/deleteLocalTempFiles.js";
 import mongoose from "mongoose";
+import { advancedFiltering } from "../utils/aggreegation/filtering.js";
+import { sorting } from "../utils/aggreegation/sorting.js";
+import { pagination } from "../utils/aggreegation/pagination.js";
 
 export const uploadVideo = catchAsync(async (req, res, next) => {
         const thumbnail = req.files.thumbnail;
@@ -428,12 +431,6 @@ GET RECENT UPLOADED VIDEOS: (for dashboard overview page)
 http://localhost:4000/api/v1/videos/my/videos?sort=-createdAt&limit=5
 
 
-
-
-
-
-
-
 */
 
 export const myVideos = catchAsync(async (req, res, next) => {
@@ -445,127 +442,29 @@ export const myVideos = catchAsync(async (req, res, next) => {
 
         const pipeline = [];
 
-        // ADVANCED FILTERING
-        let queryStr = JSON.stringify(filters);
-
-        queryStr = queryStr.replace(
-                /\b(gt|lt|lte|gte)\b/g,
-                (match) => `$${match}`
-        );
-
-        if (Object.keys(filters).length) {
-                pipeline.push({
-                        $match: JSON.parse(queryStr),
-                });
-        }
-
-        if (sort) {
-                const sortFields = sort.split(",");
-                const sortObj = {};
-
-                sortFields.forEach((field) => {
-                        if (field.startsWith("-")) {
-                                sortObj[field.slice(1)] = -1;
-                        } else {
-                                sortObj[field] = 1;
-                        }
-                });
-
-                pipeline.push({
-                        $sort: sortObj,
-                });
-        } else {
-                pipeline.push({
-                        $sort: {
-                                createdAt: -1,
-                        },
-                });
-        }
-
-        // PAGINATION
-        const pageNum = page || 1;
-        const limitNum = limit || 10;
-        const skip = (pageNum - 1) * limitNum;
-
-        pipeline.push(
-                {
-                        $match: {
-                                owner: new mongoose.Types.ObjectId(req.user.id),
-                        },
+        pipeline.push({
+                $match: {
+                        owner: new mongoose.Types.ObjectId(req.user.id),
                 },
+        });
 
-                {
-                        $facet: {
-                                matadata: [{ $count: "totalVideos" }],
-                                data: [
-                                        {
-                                                $skip: skip,
-                                        },
+        advancedFiltering(filters, pipeline);
+        sorting(sort, pipeline);
 
-                                        {
-                                                $limit: limitNum,
-                                        },
-
-                                        {
-                                                $project: {
-                                                        title: 1,
-                                                        thumbnail: 1,
-                                                        duration: 1,
-                                                        createdAt: 1,
-                                                        views: 1,
-                                                        likesCount: 1,
-                                                        commentsCount: 1,
-                                                        isPublished: 1,
-                                                },
-                                        },
-                                ],
-                        },
+        pipeline.push({
+                $project: {
+                        title: 1,
+                        thumbnail: 1,
+                        duration: 1,
+                        createdAt: 1,
+                        views: 1,
+                        likesCount: 1,
+                        commentsCount: 1,
+                        isPublished: 1,
                 },
+        });
 
-                {
-                        $project: {
-                                totalVideos: {
-                                        $ifNull: [
-                                                {
-                                                        $arrayElemAt: [
-                                                                "$matadata.totalVideos",
-                                                                0,
-                                                        ],
-                                                },
-                                                0,
-                                        ],
-                                },
-
-                                result: {
-                                        $size: "$data",
-                                },
-
-                                currentPage: {
-                                        $literal: pageNum,
-                                },
-
-                                pageSize: {
-                                        $literal: limitNum,
-                                },
-
-                                totalPages: {
-                                        $ceil: {
-                                                $divide: [
-                                                        {
-                                                                $arrayElemAt: [
-                                                                        "$matadata.totalVideos",
-                                                                        0,
-                                                                ],
-                                                        },
-                                                        limitNum,
-                                                ],
-                                        },
-                                },
-
-                                videos: "$data",
-                        },
-                }
-        );
+        pagination({ page, limit, pipeline, totalCount: "totalVideos" });
 
         const videos = await Video.aggregate(pipeline);
 
