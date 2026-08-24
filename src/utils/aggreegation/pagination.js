@@ -32,7 +32,7 @@ export const pagination = ({ page, limit, pipeline, totalCount }) => {
                                         $ifNull: [
                                                 {
                                                         $arrayElemAt: [
-                                                                "$metadata.totalVideos",
+                                                                `$metadata.${totalCount}`,
                                                                 0,
                                                         ],
                                                 },
@@ -60,7 +60,7 @@ export const pagination = ({ page, limit, pipeline, totalCount }) => {
                                                                         {
                                                                                 $arrayElemAt:
                                                                                         [
-                                                                                                "$metadata.totalVideos",
+                                                                                                `$metadata.${totalCount}`,
                                                                                                 0,
                                                                                         ],
                                                                         },

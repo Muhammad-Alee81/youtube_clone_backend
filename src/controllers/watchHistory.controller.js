@@ -3,6 +3,7 @@ import { catchAsync } from "../utils/catch_async.js";
 import ApiError from "../utils/api_error.js";
 import { WatchHistory } from "../models/history.model.js";
 import { Video } from "../models/video.model.js";
+import { pagination } from "../utils/aggreegation/pagination.js";
 
 export const addVideoToWatchHistory = catchAsync(async (req, res, next) => {
         const { videoId } = req.params;
@@ -43,7 +44,10 @@ export const addVideoToWatchHistory = catchAsync(async (req, res, next) => {
                 }
         );
 
-        return res.status(201).json({ status: "success" });
+        return res.status(201).json({
+                status: "success",
+                message: "video added to watch history",
+        });
 });
 
 export const removeVideoFromHistory = catchAsync(async (req, res, next) => {
@@ -98,40 +102,73 @@ export const getUsersWatchHistory = catchAsync(async (req, res, next) => {
                 return next(new ApiError("unauthorized", 401));
         }
 
-        const pageNum = page || 1;
-        const limitNum = limit || 10;
-        const skip = (pageNum - 1) * limitNum;
+        const pipeline = [];
 
-        const watchHistory = await WatchHistory.aggregate([
+        pipeline.push(
                 {
                         $match: {
                                 user: new mongoose.Types.ObjectId(req.user.id),
                         },
                 },
-
                 {
-                        $facet: {
-                                matadata: [
+                        $lookup: {
+                                from: "videos",
+                                foreignField: "_id",
+                                localField: "video",
+                                as: "videos",
+                                pipeline: [
                                         {
-                                                $count: "totalHistory",
+                                                $project: {
+                                                        title: 1,
+                                                        thumbnail: 1,
+                                                        videoFile: 1,
+                                                        duration: 1,
+                                                        views: 1,
+                                                        owner: 1,
+                                                },
                                         },
-                                ],
-                                data: [
                                         {
-                                                $sort: {
-                                                        watchedAt: -1,
+                                                $lookup: {
+                                                        from: "users",
+                                                        foreignField: "_id",
+                                                        localField: "owner",
+                                                        as: "owner",
+                                                        pipeline: [
+                                                                {
+                                                                        $project: {
+                                                                                username: 1,
+                                                                                fullName: 1,
+                                                                        },
+                                                                },
+                                                        ],
                                                 },
                                         },
 
                                         {
-                                                $skip: skip,
+                                                $unwind: "$owner",
                                         },
+                                ],
+                        },
+                }
+        );
 
-                                        {
-                                                $limit: limitNum,
-                                        },
+        pipeline.push({
+                $project: {
+                        watchedAt: 1,
+                        videos: 1,
+                },
+        });
 
-                                        {
+        pagination({ page, limit, pipeline, totalCount: "totalHistory" });
+
+        const watchHistory = await WatchHistory.aggregate(pipeline);
+
+        return res.status(200).json({ status: "success", watchHistory });
+});
+
+/*
+
+{
                                                 $lookup: {
                                                         from: "videos",
                                                         foreignField: "_id",
@@ -175,58 +212,5 @@ export const getUsersWatchHistory = catchAsync(async (req, res, next) => {
                                         {
                                                 $unwind: "$videos",
                                         },
-                                ],
-                        },
-                },
 
-                {
-                        $project: {
-                                pagination: {
-                                        totalHistory: {
-                                                $ifNull: [
-                                                        {
-                                                                $arrayElemAt: [
-                                                                        "$matadata.totalHistory",
-                                                                        0,
-                                                                ],
-                                                        },
-
-                                                        0,
-                                                ],
-                                        },
-
-                                        results: {
-                                                $size: "$data",
-                                        },
-                                        pageSize: {
-                                                $literal: limitNum,
-                                        },
-
-                                        totalPages: {
-                                                $ceil: {
-                                                        $divide: [
-                                                                {
-                                                                        $ifNull: [
-                                                                                {
-                                                                                        $arrayElemAt:
-                                                                                                [
-                                                                                                        "$matadata.totalComments",
-                                                                                                        0,
-                                                                                                ],
-                                                                                },
-                                                                                0,
-                                                                        ],
-                                                                },
-                                                                limitNum,
-                                                        ],
-                                                },
-                                        },
-                                },
-
-                                data: "$data",
-                        },
-                },
-        ]);
-
-        return res.status(200).json({ status: "success", watchHistory });
-});
+*/
