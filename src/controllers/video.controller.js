@@ -1,4 +1,4 @@
-import { size } from "zod";
+import { pipe, size } from "zod";
 import { Video } from "../models/video.model.js";
 import ApiError from "../utils/api_error.js";
 import { catchAsync } from "../utils/catch_async.js";
@@ -76,140 +76,24 @@ export const uploadVideo = catchAsync(async (req, res, next) => {
 export const getAllVideos = catchAsync(async (req, res, next) => {
         const { page, limit, sort, ...filters } = req.validateQuery;
 
-        // ADVANCED FILTERING
-        let queryStr = JSON.stringify(filters);
-
-        queryStr = queryStr.replace(
-                /\b(gt|lt|lte|gte)\b/g,
-                (match) => `$${match}`
-        );
-
         const pipeline = [];
 
-        if (Object.keys(filters).length) {
-                pipeline.push({
-                        $match: JSON.parse(queryStr),
-                });
-        }
+        advancedFiltering(filters, pipeline);
+        sorting(sort, pipeline);
 
-        // SORTING
-        if (sort) {
-                const sortFields = sort.split(",");
-                const sortObj = {};
-
-                sortFields.forEach((field) => {
-                        if (field.startsWith("-")) {
-                                sortObj[field.slice(1)] = -1;
-                        } else {
-                                sortObj[field] = 1;
-                        }
-                });
-
-                pipeline.push({
-                        $sort: sortObj,
-                });
-        } else {
-                pipeline.push({
-                        $sort: {
-                                createdAt: -1,
-                        },
-                });
-        }
-
-        // PAGINATION
-        const pageNum = page || 1;
-        const limitNum = limit || 10;
-        const skip = (pageNum - 1) * limitNum;
-
-        pipeline.push(
-                {
-                        $facet: {
-                                metadata: [{ $count: "totalVideos" }],
-
-                                data: [
-                                        {
-                                                $skip: skip,
-                                        },
-                                        {
-                                                $limit: limitNum,
-                                        },
-                                        {
-                                                $lookup: {
-                                                        from: "users",
-                                                        foreignField: "_id",
-                                                        localField: "owner",
-                                                        as: "owner",
-                                                        pipeline: [
-                                                                {
-                                                                        $project: {
-                                                                                fullName: 1,
-                                                                                avatar: 1,
-                                                                        },
-                                                                },
-                                                        ],
-                                                },
-                                        },
-                                        {
-                                                $unwind: "$owner",
-                                        },
-                                        {
-                                                $project: {
-                                                        title: 1,
-                                                        thumbnail: 1,
-                                                        videoFile: 1,
-                                                        duration: 1,
-                                                        owner: 1,
-                                                        views: 1,
-                                                        createdAt: 1,
-                                                },
-                                        },
-                                ],
-                        },
+        pipeline.push({
+                $project: {
+                        title: 1,
+                        thumbnail: 1,
+                        videoFile: 1,
+                        duration: 1,
+                        owner: 1,
+                        views: 1,
+                        createdAt: 1,
                 },
-                {
-                        $project: {
-                                totalVideos: {
-                                        $ifNull: [
-                                                {
-                                                        $arrayElemAt: [
-                                                                "$metadata.totalVideos",
-                                                                0,
-                                                        ],
-                                                },
-                                                0,
-                                        ],
-                                },
+        });
 
-                                result: {
-                                        $size: "$data",
-                                },
-
-                                currentPage: {
-                                        $literal: pageNum,
-                                },
-
-                                pageSize: {
-                                        $literal: limitNum,
-                                },
-
-                                totalPages: {
-                                        $ceil: {
-                                                $divide: [
-                                                        {
-                                                                $arrayElemAt: [
-                                                                        "$metadata.totalVideos",
-                                                                        0,
-                                                                ],
-                                                        },
-                                                        limitNum,
-                                                ],
-                                        },
-                                },
-
-                                videos: "$data",
-                        },
-                }
-        );
+        pagination({ page, limit, pipeline, totalCount: "totalVideos" });
 
         const allVideos = await Video.aggregate(pipeline);
 
