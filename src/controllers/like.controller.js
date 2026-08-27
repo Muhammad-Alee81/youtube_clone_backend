@@ -5,6 +5,7 @@ import { Video } from "../models/video.model.js";
 import { Like } from "../models/Likes.model.js";
 import { Comment } from "../models/comments.model.js";
 import { Post } from "../models/posts.model.js";
+import { pagination } from "../utils/aggreegation/pagination.js";
 
 export const toggleVideoLike = catchAsync(async (req, res, next) => {
         const { videoId } = req.params;
@@ -120,11 +121,15 @@ export const togglePostLike = catchAsync(async (req, res, next) => {
 });
 
 export const getAllLikedVideos = catchAsync(async (req, res, next) => {
+        const { page, limit } = req.validateQuery;
+
         if (!req.user?.id) {
                 return next(new ApiError("unauthorized", 403));
         }
 
-        const likedVideos = await Like.aggregate([
+        const pipeline = [];
+
+        pipeline.push(
                 {
                         $match: {
                                 likedBy: new mongoose.Types.ObjectId(
@@ -132,7 +137,6 @@ export const getAllLikedVideos = catchAsync(async (req, res, next) => {
                                 ),
                         },
                 },
-
                 {
                         $lookup: {
                                 from: "videos",
@@ -185,8 +189,12 @@ export const getAllLikedVideos = catchAsync(async (req, res, next) => {
                                 likedBy: 1,
                                 videos: 1,
                         },
-                },
-        ]);
+                }
+        );
+
+        pagination({ page, limit, pipeline, totalCount: "totalLikedVideos" });
+
+        const likedVideos = await Like.aggregate(pipeline);
 
         return res.status(200).json({ status: "success", likedVideos });
 });
