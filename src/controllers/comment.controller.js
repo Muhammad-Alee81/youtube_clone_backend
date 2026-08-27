@@ -4,6 +4,8 @@ import ApiError from "../utils/api_error.js";
 import { Video } from "../models/video.model.js";
 import { Comment } from "../models/comments.model.js";
 import { Post } from "../models/posts.model.js";
+import { pagination } from "../utils/aggreegation/pagination.js";
+import { sorting } from "../utils/aggreegation/sorting.js";
 
 export const addComment = catchAsync(async (req, res, next) => {
         const { videoId } = req.params;
@@ -530,159 +532,84 @@ export const addCommentOnPost = catchAsync(async (req, res, next) => {
 export const getAllParentCommentsOnPost = catchAsync(async (req, res, next) => {
         const { postId } = req.params;
 
-        const { page, limit } = req.validateQuery;
+        const { page, limit, sort } = req.validateQuery;
 
         if (!mongoose.Types.ObjectId.isValid(postId)) {
                 return next(new ApiError("Invalid Id", 400));
         }
 
-        // PAGINATION
-        const pageNum = page || 1;
-        const limitNum = limit || 5;
-        const skip = (pageNum - 1) * limitNum;
+        const pipeline = [];
+        pipeline.push({
+                $match: {
+                        commentOn: {
+                                type: "Post",
+                                id: new mongoose.Types.ObjectId(postId),
+                        },
+                        parentComment: null,
+                },
+        });
 
-        const parentComment = await Comment.aggregate([
+        sorting(sort, pipeline);
+
+        pipeline.push(
                 {
-                        $match: {
-                                commentOn: {
-                                        type: "Post",
-                                        id: new mongoose.Types.ObjectId(postId),
-                                },
-                                parentComment: null,
+                        $lookup: {
+                                from: "users",
+                                foreignField: "_id",
+                                localField: "owner",
+                                as: "owner",
+
+                                pipeline: [
+                                        {
+                                                $project: {
+                                                        username: 1,
+                                                },
+                                        },
+                                ],
                         },
                 },
 
                 {
-                        $facet: {
-                                matadata: [
-                                        {
-                                                $count: "totalComments",
-                                        },
-                                ],
+                        $unwind: "$owner",
+                },
 
-                                data: [
-                                        {
-                                                $sort: {
-                                                        createdAt: -1,
-                                                },
-                                        },
+                {
+                        $lookup: {
+                                from: "comments",
+                                foreignField: "parentComment",
+                                localField: "_id",
+                                as: "replies",
+                        },
+                },
 
-                                        {
-                                                $skip: skip,
-                                        },
-
-                                        {
-                                                $limit: limitNum,
-                                        },
-
-                                        {
-                                                $lookup: {
-                                                        from: "users",
-                                                        foreignField: "_id",
-                                                        localField: "owner",
-                                                        as: "owner",
-
-                                                        pipeline: [
-                                                                {
-                                                                        $project: {
-                                                                                username: 1,
-                                                                        },
-                                                                },
-                                                        ],
-                                                },
-                                        },
-
-                                        {
-                                                $unwind: "$owner",
-                                        },
-
-                                        {
-                                                $lookup: {
-                                                        from: "comments",
-                                                        foreignField:
-                                                                "parentComment",
-                                                        localField: "_id",
-                                                        as: "replies",
-                                                },
-                                        },
-
-                                        {
-                                                $addFields: {
-                                                        replyCount: {
-                                                                $size: "$replies",
-                                                        },
-                                                },
-                                        },
-
-                                        {
-                                                $project: {
-                                                        content: 1,
-                                                        commentOn: 1,
-                                                        owner: 1,
-                                                        isDeleted: 1,
-                                                        createdAt: 1,
-                                                        updatedAt: 1,
-                                                        replyCount: 1,
-                                                },
-                                        },
-                                ],
+                {
+                        $addFields: {
+                                replyCount: {
+                                        $size: "$replies",
+                                },
                         },
                 },
 
                 {
                         $project: {
-                                pagination: {
-                                        totalComments: {
-                                                $ifNull: [
-                                                        {
-                                                                $arrayElemAt: [
-                                                                        "$matadata.totalComments",
-                                                                        0,
-                                                                ],
-                                                        },
-
-                                                        0,
-                                                ],
-                                        },
-
-                                        results: {
-                                                $size: "$data",
-                                        },
-                                        pageSize: {
-                                                $literal: limitNum,
-                                        },
-
-                                        totalPages: {
-                                                $ceil: {
-                                                        $divide: [
-                                                                {
-                                                                        $ifNull: [
-                                                                                {
-                                                                                        $arrayElemAt:
-                                                                                                [
-                                                                                                        "$matadata.totalComments",
-                                                                                                        0,
-                                                                                                ],
-                                                                                },
-                                                                                0,
-                                                                        ],
-                                                                },
-                                                                limitNum,
-                                                        ],
-                                                },
-                                        },
-                                },
-
-                                data: "$data",
+                                content: 1,
+                                commentOn: 1,
+                                owner: 1,
+                                isDeleted: 1,
+                                createdAt: 1,
+                                updatedAt: 1,
+                                replyCount: 1,
                         },
-                },
-        ]);
+                }
+        );
+
+        pagination({ page, limit, pipeline, totalCount: "totalComments" });
+
+        const parentComment = await Comment.aggregate(pipeline);
 
         return res
                 .status(200)
                 .json({ status: "success", comments: parentComment });
 });
 
-
-// get all comments of Authenticated user on his all uploaded videos 
-
+// get all comments of Authenticated user on his all uploaded videos

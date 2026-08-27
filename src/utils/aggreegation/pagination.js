@@ -72,7 +72,7 @@ export const pagination = ({ page, limit, pipeline, totalCount }) => {
                                         },
                                 },
 
-                                videos: "$data",
+                                data: "$data",
                         },
                 }
         );

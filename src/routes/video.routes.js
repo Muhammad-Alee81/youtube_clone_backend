@@ -2,6 +2,7 @@ import express from "express";
 import {
         deleteVideo,
         getAllVideos,
+        getChannelVideos,
         getVideoById,
         myVideos,
         togglePublishStatus,
@@ -33,8 +34,10 @@ router.route("/upload-video").post(
 );
 
 router.route("/my/videos").get(validation(getAllVideoQueryValidate), myVideos);
+router.route("/channel/:username").get(validation(getAllVideoQueryValidate), getChannelVideos);
 router.route("/update/:videoId").patch(upload.single("thumbnail"), updateVideo);
 router.route("/delete/:videoId").delete(deleteVideo);
 router.route("/toggle/publish/:videoId").patch(togglePublishStatus);
 
 export default router;
+ 

@@ -13,6 +13,7 @@ import mongoose from "mongoose";
 import { advancedFiltering } from "../utils/aggreegation/filtering.js";
 import { sorting } from "../utils/aggreegation/sorting.js";
 import { pagination } from "../utils/aggreegation/pagination.js";
+import { User } from "../models/user.model.js";
 
 export const uploadVideo = catchAsync(async (req, res, next) => {
         const thumbnail = req.files.thumbnail;
@@ -353,4 +354,49 @@ export const myVideos = catchAsync(async (req, res, next) => {
         const videos = await Video.aggregate(pipeline);
 
         return res.status(200).json({ status: "suceess", videos });
+});
+
+// Get users channel videos
+
+// http://localhost:4000/api/v1/videos/channel/:username
+
+export const getChannelVideos = catchAsync(async (req, res, next) => {
+        const { page, sort, limit, ...filters } = req.validateQuery;
+
+        const channel = await User.exists({
+                username: req.params.username,
+        });
+
+        if (!channel) {
+                return next(new ApiError("channel not found", 404));
+        }
+
+        const pipeline = [];
+
+        pipeline.push(
+                {
+                        $match: {
+                                owner: channel._id,
+                                isPublished: true,
+                        },
+                },
+                {
+                        $project: {
+                                title: 1,
+                                thumbnail: 1,
+                                videoFile: 1,
+                                duration: 1,
+                                views: 1,
+                                createdAt: 1,
+                                isPublished: 1,
+                        },
+                }
+        );
+
+        sorting(sort, pipeline);
+        pagination({ page, limit, pipeline, totalCount: "totalVideos" });
+
+        const videos = await Video.aggregate(pipeline);
+
+        return res.status(200).json({ status: "success", videos });
 });
