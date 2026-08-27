@@ -4,6 +4,8 @@ import ApiError from "../utils/api_error.js";
 import { catchAsync } from "../utils/catch_async.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { v2 as cloudinary } from "cloudinary";
+import { sorting } from "../utils/aggreegation/sorting.js";
+import { pagination } from "../utils/aggreegation/pagination.js";
 
 const uploadPostImagesOnCloud = async (images) => {
         const result = await Promise.all(
@@ -140,5 +142,33 @@ export const getAllPost = catchAsync(async (req, res, next) => {
 });
 
 export const myPosts = catchAsync(async (req, res, next) => {
-        return res.status(200).json({ status: "success" });
+        const { sort, page, limit } = req.validateQuery;
+
+        if (!req.user?.id) {
+                return next(new ApiError("unauthorized", 401));
+        }
+
+        const pipeline = [];
+
+        pipeline.push(
+                {
+                        $match: {
+                                owner: new mongoose.Types.ObjectId(req.user.id),
+                        },
+                },
+                {
+                        $project: {
+                                content: 1,
+                                images: 1,
+                                createdAt: 1,
+                        },
+                }
+        );
+
+        sorting(sort, pipeline);
+        pagination({ page, limit, pipeline, totalCount: "totalPosts" });
+
+        const myPosts = await Post.aggregate(pipeline);
+
+        return res.status(200).json({ status: "success", myPosts });
 });
