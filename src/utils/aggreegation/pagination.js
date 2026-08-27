@@ -28,7 +28,7 @@ export const pagination = ({ page, limit, pipeline, totalCount }) => {
 
                 {
                         $project: {
-                                totalVideos: {
+                                [totalCount]: {
                                         $ifNull: [
                                                 {
                                                         $arrayElemAt: [

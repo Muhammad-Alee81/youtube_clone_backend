@@ -1,5 +1,6 @@
 import { Subscription } from "../models/subscription.model.js";
 import { User } from "../models/user.model.js";
+import { pagination } from "../utils/aggreegation/pagination.js";
 import ApiError from "../utils/api_error.js";
 import { catchAsync } from "../utils/catch_async.js";
 import mongoose from "mongoose";
@@ -89,11 +90,15 @@ export const unSubscribeChannel = catchAsync(async (req, res, next) => {
 });
 
 export const recentSubscribers = catchAsync(async (req, res, next) => {
+        const { page, limit } = req.validateQuery;
+
         if (!req.user?.id) {
                 return next(new ApiError("unauthorized", 401));
         }
 
-        const recentSubscribers = await Subscription.aggregate([
+        const pipeline = [];
+
+        pipeline.push(
                 {
                         $match: {
                                 channel: new mongoose.Types.ObjectId(
@@ -101,17 +106,14 @@ export const recentSubscribers = catchAsync(async (req, res, next) => {
                                 ),
                         },
                 },
-
                 {
                         $sort: {
                                 createdAt: -1,
                         },
-                },
+                }
+        );
 
-                {
-                        $limit: 3,
-                },
-
+        pipeline.push(
                 {
                         $lookup: {
                                 from: "users",
@@ -140,8 +142,12 @@ export const recentSubscribers = catchAsync(async (req, res, next) => {
                                 createdAt: 1,
                                 subscribers: 1,
                         },
-                },
-        ]);
+                }
+        );
+
+        pagination({ page, limit, pipeline, totalCount: "totalSubscribers" });
+
+        const recentSubscribers = await Subscription.aggregate(pipeline);
 
         return res.status(200).json({ status: "success", recentSubscribers });
 });
