@@ -162,11 +162,6 @@ export const getAllParentComments = catchAsync(async (req, res, next) => {
         return next(new ApiError("video not found", 404));
     }
 
-    // PAGINATION
-    const pageNum = page || 1;
-    const limitNum = limit || 10;
-    const skip = (pageNum - 1) * limitNum;
-
     const pipeline = [];
 
     pipeline.push(
@@ -181,73 +176,23 @@ export const getAllParentComments = catchAsync(async (req, res, next) => {
         },
 
         {
-            $facet: {
-                metaData: [{ $count: "totalComments" }],
-                data: [
-                    {
-                        $sort: {
-                            createdAt: -1,
-                        },
-                    },
+            $sort: {
+                createdAt: -1,
+            },
+        },
 
-                    {
-                        $skip: skip,
-                    },
-                    {
-                        $limit: limitNum,
-                    },
-
-                    {
-                        $lookup: {
-                            from: "users",
-                            foreignField: "_id",
-                            localField: "owner",
-                            as: "owner",
-                            pipeline: [
-                                {
-                                    $project: {
-                                        username: 1,
-                                        email: 1,
-                                        fullName: 1,
-                                    },
-                                },
-                            ],
-                        },
-                    },
-
-                    {
-                        $unwind: "$owner",
-                    },
-
-                    {
-                        $lookup: {
-                            from: "comments",
-                            foreignField: "parentComment",
-                            localField: "_id",
-                            as: "replies",
-                        },
-                    },
-
-                    {
-                        $addFields: {
-                            replyCount: {
-                                $size: "$replies",
-                            },
-                        },
-                    },
-
+        {
+            $lookup: {
+                from: "users",
+                foreignField: "_id",
+                localField: "owner",
+                as: "owner",
+                pipeline: [
                     {
                         $project: {
-                            content: 1,
-                            video: 1,
-                            isDeleted: 1,
-                            createdAt: 1,
-                            updatedAt: 1,
-                            owner: 1,
-                            replyCount: 1,
-                            parentComment: 1,
-                            replyCount: 1,
-                            commentOn: 1,
+                            username: 1,
+                            email: 1,
+                            fullName: 1,
                         },
                     },
                 ],
@@ -255,53 +200,43 @@ export const getAllParentComments = catchAsync(async (req, res, next) => {
         },
 
         {
-            $project: {
-                pagination: {
-                    totalComments: {
-                        $ifNull: [
-                            {
-                                $arrayElemAt: ["$metaData.totalComments", 0],
-                            },
-                            0,
-                        ],
-                    },
+            $unwind: "$owner",
+        },
 
-                    result: {
-                        $size: "$data",
-                    },
+        {
+            $lookup: {
+                from: "comments",
+                foreignField: "parentComment",
+                localField: "_id",
+                as: "replies",
+            },
+        },
 
-                    currentPage: {
-                        $literal: pageNum,
-                    },
-
-                    pageSize: {
-                        $literal: limitNum,
-                    },
-
-                    totalPages: {
-                        $ceil: {
-                            $divide: [
-                                {
-                                    $ifNull: [
-                                        {
-                                            $arrayElemAt: [
-                                                "$metaData.totalComments",
-                                                0,
-                                            ],
-                                        },
-                                        0,
-                                    ],
-                                },
-                                limitNum,
-                            ],
-                        },
-                    },
+        {
+            $addFields: {
+                replyCount: {
+                    $size: "$replies",
                 },
+            },
+        },
 
-                comments: "$data",
+        {
+            $project: {
+                content: 1,
+                video: 1,
+                isDeleted: 1,
+                createdAt: 1,
+                updatedAt: 1,
+                owner: 1,
+                replyCount: 1,
+                parentComment: 1,
+                replyCount: 1,
+                commentOn: 1,
             },
         }
     );
+
+    pagination({ page, limit, pipeline, totalCount: "totalComments" });
 
     const parentComment = await Comment.aggregate(pipeline);
 
@@ -322,12 +257,9 @@ export const getCommentReplies = catchAsync(async (req, res, next) => {
         return next(new ApiError("Comment not found", 404));
     }
 
-    // PAGINATION
-    const pageNum = page || 1;
-    const limitNum = limit || 5;
-    const skip = (pageNum - 1) * limitNum;
+    const pipeline = [];
 
-    const pipeline = [
+    pipeline.push(
         {
             $match: {
                 parentComment: new mongoose.Types.ObjectId(commentId),
@@ -335,76 +267,21 @@ export const getCommentReplies = catchAsync(async (req, res, next) => {
         },
 
         {
-            $facet: {
-                metaData: [{ $count: "totalReplies" }],
-                data: [
-                    {
-                        $sort: {
-                            createdAt: -1,
-                        },
-                    },
+            $sort: {
+                createdAt: -1,
+            },
+        },
 
-                    {
-                        $skip: skip,
-                    },
-
-                    {
-                        $limit: limitNum,
-                    },
-
-                    {
-                        $lookup: {
-                            from: "users",
-                            foreignField: "_id",
-                            localField: "owner",
-                            as: "owner",
-                            pipeline: [
-                                {
-                                    $project: {
-                                        username: 1,
-                                    },
-                                },
-                            ],
-                        },
-                    },
-
-                    {
-                        $unwind: {
-                            path: "$owner",
-                            preserveNullAndEmptyArrays: true,
-                        },
-                    },
-
-                    {
-                        $lookup: {
-                            from: "users",
-                            localField: "replyTo",
-                            foreignField: "_id",
-                            as: "replyTo",
-                            pipeline: [
-                                {
-                                    $project: {
-                                        username: 1,
-                                    },
-                                },
-                            ],
-                        },
-                    },
-
-                    {
-                        $unwind: {
-                            path: "$replyTo",
-                            preserveNullAndEmptyArrays: true,
-                        },
-                    },
-
+        {
+            $lookup: {
+                from: "users",
+                foreignField: "_id",
+                localField: "owner",
+                as: "owner",
+                pipeline: [
                     {
                         $project: {
-                            content: 1,
-                            owner: 1,
-                            parentComment: 1,
-                            replyTo: 1,
-                            commentOn: 1,
+                            username: 1,
                         },
                     },
                 ],
@@ -412,54 +289,47 @@ export const getCommentReplies = catchAsync(async (req, res, next) => {
         },
 
         {
-            $project: {
-                pagination: {
-                    totalComments: {
-                        $ifNull: [
-                            {
-                                $arrayElemAt: ["$metaData.totalReplies", 0],
-                            },
-                            0,
-                        ],
-                    },
-
-                    result: {
-                        $size: "$data",
-                    },
-
-                    pageSize: {
-                        $literal: limitNum,
-                    },
-
-                    currentPage: {
-                        $literal: pageNum,
-                    },
-
-                    totalPages: {
-                        $ceil: {
-                            $divide: [
-                                {
-                                    $ifNull: [
-                                        {
-                                            $arrayElemAt: [
-                                                "$metaData.totalReplies",
-                                                0,
-                                            ],
-                                        },
-                                        0,
-                                    ],
-                                },
-
-                                limitNum,
-                            ],
-                        },
-                    },
-                },
-
-                data: "$data",
+            $unwind: {
+                path: "$owner",
+                preserveNullAndEmptyArrays: true,
             },
         },
-    ];
+
+        {
+            $lookup: {
+                from: "users",
+                localField: "replyTo",
+                foreignField: "_id",
+                as: "replyTo",
+                pipeline: [
+                    {
+                        $project: {
+                            username: 1,
+                        },
+                    },
+                ],
+            },
+        },
+
+        {
+            $unwind: {
+                path: "$replyTo",
+                preserveNullAndEmptyArrays: true,
+            },
+        },
+
+        {
+            $project: {
+                content: 1,
+                owner: 1,
+                parentComment: 1,
+                replyTo: 1,
+                commentOn: 1,
+            },
+        }
+    );
+
+    pagination({ page, limit, pipeline, totalCount: "totalReplies" });
 
     const replies = await Comment.aggregate(pipeline);
 
