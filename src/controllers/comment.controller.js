@@ -600,6 +600,8 @@ export const getAllParentCommentsOnPost = catchAsync(async (req, res, next) => {
 // get all comments of Authenticated user on his all uploaded videos
 
 export const getRecentCommentsOnVideos = catchAsync(async (req, res, next) => {
+    const { page, limit } = req.validateQuery;
+
     if (!req.user?.id) {
         return next(new ApiError("unauthorized", 404));
     }
@@ -692,12 +694,16 @@ export const getRecentCommentsOnVideos = catchAsync(async (req, res, next) => {
         }
     );
 
+    pagination({ page, limit, pipeline, totalCount: "totalComments" });
+
     const comments = await Comment.aggregate(pipeline);
 
     return res.status(200).json({ status: "success", comments });
 });
 
 export const getRecentCommentsOnPosts = catchAsync(async (req, res, next) => {
+    const { page, limit } = req.validateQuery;
+
     if (!req.user?.id) {
         return next(new ApiError("unauthorized", 404));
     }
@@ -787,6 +793,8 @@ export const getRecentCommentsOnPosts = catchAsync(async (req, res, next) => {
             },
         }
     );
+
+    pagination({ page, limit, pipeline, totalCount: "totalComments" });
 
     const comments = await Comment.aggregate(pipeline);
 

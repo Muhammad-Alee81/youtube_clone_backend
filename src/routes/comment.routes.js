@@ -1,13 +1,13 @@
 import express from "express";
 import {
-        addComment,
-        deleteComment,
-        getAllParentComments,
-        getCommentReplies,
-        getRecentCommentsOnPosts,
-        getRecentCommentsOnVideos,
-        replyToComment,
-        updateComment,
+    addComment,
+    deleteComment,
+    getAllParentComments,
+    getCommentReplies,
+    getRecentCommentsOnPosts,
+    getRecentCommentsOnVideos,
+    replyToComment,
+    updateComment,
 } from "../controllers/comment.controller.js";
 import { checkAuth } from "../middlewares/auth.middleware.js";
 import { validation } from "../middlewares/validation.midleware.js";
@@ -18,15 +18,20 @@ const router = express.Router({ mergeParams: true });
 router.use(checkAuth);
 router.route("/:videoId/").post(addComment);
 
-router.route("/:commentId/replies")
-        .post(replyToComment)
-        .get(validation(commentQueryValidation), getCommentReplies);
+router
+    .route("/:commentId/replies")
+    .post(replyToComment)
+    .get(validation(commentQueryValidation), getCommentReplies);
 
-router.route("/videos/recent").get(getRecentCommentsOnVideos);
-router.route("/posts/recent").get(getRecentCommentsOnPosts);
+router
+    .route("/videos/recent")
+    .get(validation(commentQueryValidation), getRecentCommentsOnVideos);
+router
+    .route("/posts/recent")
+    .get(validation(commentQueryValidation), getRecentCommentsOnPosts);
 
 router.route("/:commentId/update").patch(updateComment);
-router.route("/:commentId/delete").patch(deleteComment); 
+router.route("/:commentId/delete").patch(deleteComment);
 
 // NESTED ROUTE
 router.route("/").get(validation(commentQueryValidation), getAllParentComments);
