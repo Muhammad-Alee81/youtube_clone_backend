@@ -4,6 +4,7 @@ import {
         deleteComment,
         getAllParentComments,
         getCommentReplies,
+        getRecentComments,
         replyToComment,
         updateComment,
 } from "../controllers/comment.controller.js";
@@ -19,6 +20,9 @@ router.route("/:videoId/").post(addComment);
 router.route("/:commentId/replies")
         .post(replyToComment)
         .get(validation(commentQueryValidation), getCommentReplies);
+
+router.route("/recent").get(getRecentComments);
+
 router.route("/:commentId/update").patch(updateComment);
 router.route("/:commentId/delete").patch(deleteComment);
 
