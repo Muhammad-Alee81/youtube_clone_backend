@@ -599,9 +599,9 @@ export const getAllParentCommentsOnPost = catchAsync(async (req, res, next) => {
 
 // get all comments of Authenticated user on his all uploaded videos
 
-export const getRecentComments = catchAsync(async (req, res, next) => {
+export const getRecentCommentsOnVideos = catchAsync(async (req, res, next) => {
     if (!req.user?.id) {
-        return next(new ApiError("unauthorized", 401));
+        return next(new ApiError("unauthorized", 404));
     }
 
     const pipeline = [];
@@ -609,10 +609,10 @@ export const getRecentComments = catchAsync(async (req, res, next) => {
     pipeline.push(
         {
             $match: {
+                "commentOn.type": "Video",
                 parentComment: null,
             },
         },
-
         {
             $sort: {
                 createdAt: -1,
@@ -620,182 +620,79 @@ export const getRecentComments = catchAsync(async (req, res, next) => {
         },
 
         {
-            $facet: {
-                videosComments: [
-                    {
-                        $match: {
-                            "commentOn.type": "Video",
-                        },
-                    },
-
-                    {
-                        $lookup: {
-                            from: "users",
-                            foreignField: "_id",
-                            localField: "owner",
-                            as: "owner",
-                            pipeline: [
-                                {
-                                    $project: {
-                                        username: 1,
-                                        fullName: 1,
-                                        avatar: 1,
-                                    },
-                                },
-                            ],
-                        },
-                    },
-
-                    {
-                        $unwind: "$owner",
-                    },
-
-                    {
-                        $lookup: {
-                            from: "videos",
-                            let: {
-                                contentId: "$commentOn.id",
-                            },
-
-                            pipeline: [
-                                {
-                                    $match: {
-                                        $expr: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$_id",
-                                                        "$$contentId",
-                                                    ],
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$owner",
-                                                        new mongoose.Types.ObjectId(
-                                                            req.user.id
-                                                        ),
-                                                    ],
-                                                },
-                                            ],
-                                        },
-                                    },
-                                },
-                                {
-                                    $project: {
-                                        title: 1,
-                                        thumbnail: 1,
-                                        duration: 1,
-                                        createdAt: 1,
-                                    },
-                                },
-                            ],
-                            as: "video",
-                        },
-                    },
-
-                    {
-                        $unwind: "$video",
-                    },
-
+            $lookup: {
+                from: "users",
+                foreignField: "_id",
+                localField: "owner",
+                as: "owner",
+                pipeline: [
                     {
                         $project: {
-                            content: 1,
-                            commentOn: 1,
-                            owner: 1,
-                            createdAt: 1,
-                            video: 1,
-                        },
-                    },
-                ],
-
-                postComment: [
-                    {
-                        $match: {
-                            "commentOn.type": "Post",
-                        },
-                    },
-
-                    {
-                        $lookup: {
-                            from: "users",
-                            foreignField: "_id",
-                            localField: "owner",
-                            as: "owner",
-                            pipeline: [
-                                {
-                                    $project: {
-                                        username: 1,
-                                        fullName: 1,
-                                        avatar: 1,
-                                    },
-                                },
-                            ],
-                        },
-                    },
-                    {
-                        $unwind: "$owner",
-                    },
-
-                    {
-                        $lookup: {
-                            from: "posts",
-                            let: {
-                                contentId: "$commentOn.id",
-                            },
-
-                            pipeline: [
-                                {
-                                    $match: {
-                                        $expr: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$_id",
-                                                        "$$contentId",
-                                                    ],
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$owner",
-                                                        new mongoose.Types.ObjectId(
-                                                            req.user.id
-                                                        ),
-                                                    ],
-                                                },
-                                            ],
-                                        },
-                                    },
-                                },
-
-                                {
-                                    $project: {
-                                        content: 1,
-                                        images: 1,
-                                    },
-                                },
-                            ],
-                            as: "posts",
-                        },
-                    },
-
-                    {
-                        $unwind: "$posts",
-                    },
-
-                    {
-                        $project: {
-                            content: 1,
-                            owner: 1,
-                            createdAt: 1,
-                            posts: 1,
+                            username: 1,
+                            fullName: 1,
+                            avatar: 1,
                         },
                     },
                 ],
             },
+        },
+
+        {
+            $unwind: "$owner",
+        },
+
+        {
+            $lookup: {
+                from: "videos",
+                let: {
+                    contentId: "$commentOn.id",
+                },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: {
+                                $and: [
+                                    { $eq: ["$_id", "$$contentId"] },
+                                    {
+                                        $eq: [
+                                            "$owner",
+                                            new mongoose.Types.ObjectId(
+                                                req.user.id
+                                            ),
+                                        ],
+                                    },
+                                ],
+                            },
+                        },
+                    },
+
+                    {
+                        $project: {
+                            title: 1,
+                            thumbnail: 1,
+                            duration: 1,
+                            createdAt: 1,
+                        },
+                    },
+                ],
+                as: "video",
+            },
+        },
+
+        {
+            $unwind: "$video",
+        },
+
+        {
+            $project: {
+                content: 1,
+                owner: 1,
+                video: 1,
+            },
         }
     );
 
-    const recentComments = await Comment.aggregate(pipeline);
+    const coments = await Comment.aggregate(pipeline);
 
-    return res.status(200).json({ status: "success", recentComments });
+    return res.status(200).json({ status: "success", coments });
 });

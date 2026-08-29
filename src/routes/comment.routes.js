@@ -4,7 +4,7 @@ import {
         deleteComment,
         getAllParentComments,
         getCommentReplies,
-        getRecentComments,
+        getRecentCommentsOnVideos,
         replyToComment,
         updateComment,
 } from "../controllers/comment.controller.js";
@@ -21,10 +21,10 @@ router.route("/:commentId/replies")
         .post(replyToComment)
         .get(validation(commentQueryValidation), getCommentReplies);
 
-router.route("/recent").get(getRecentComments);
+router.route("/videos/recent").get(getRecentCommentsOnVideos);
 
 router.route("/:commentId/update").patch(updateComment);
-router.route("/:commentId/delete").patch(deleteComment);
+router.route("/:commentId/delete").patch(deleteComment); 
 
 // NESTED ROUTE
 router.route("/").get(validation(commentQueryValidation), getAllParentComments);
