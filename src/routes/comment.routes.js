@@ -4,6 +4,7 @@ import {
         deleteComment,
         getAllParentComments,
         getCommentReplies,
+        getRecentCommentsOnPosts,
         getRecentCommentsOnVideos,
         replyToComment,
         updateComment,
@@ -22,6 +23,7 @@ router.route("/:commentId/replies")
         .get(validation(commentQueryValidation), getCommentReplies);
 
 router.route("/videos/recent").get(getRecentCommentsOnVideos);
+router.route("/posts/recent").get(getRecentCommentsOnPosts);
 
 router.route("/:commentId/update").patch(updateComment);
 router.route("/:commentId/delete").patch(deleteComment); 

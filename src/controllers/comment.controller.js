@@ -692,7 +692,103 @@ export const getRecentCommentsOnVideos = catchAsync(async (req, res, next) => {
         }
     );
 
-    const coments = await Comment.aggregate(pipeline);
+    const comments = await Comment.aggregate(pipeline);
 
-    return res.status(200).json({ status: "success", coments });
+    return res.status(200).json({ status: "success", comments });
+});
+
+export const getRecentCommentsOnPosts = catchAsync(async (req, res, next) => {
+    if (!req.user?.id) {
+        return next(new ApiError("unauthorized", 404));
+    }
+
+    const pipeline = [];
+
+    pipeline.push(
+        {
+            $match: {
+                "commentOn.type": "Post",
+                parentComment: null,
+            },
+        },
+        {
+            $sort: {
+                createdAt: -1,
+            },
+        },
+
+        {
+            $lookup: {
+                from: "users",
+                foreignField: "_id",
+                localField: "owner",
+                as: "owner",
+                pipeline: [
+                    {
+                        $project: {
+                            username: 1,
+                            fullName: 1,
+                            avatar: 1,
+                        },
+                    },
+                ],
+            },
+        },
+
+        {
+            $unwind: "$owner",
+        },
+
+        {
+            $lookup: {
+                from: "posts",
+                let: {
+                    contentId: "$commentOn.id",
+                },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: {
+                                $and: [
+                                    { $eq: ["$_id", "$$contentId"] },
+                                    {
+                                        $eq: [
+                                            "$owner",
+                                            new mongoose.Types.ObjectId(
+                                                req.user.id
+                                            ),
+                                        ],
+                                    },
+                                ],
+                            },
+                        },
+                    },
+
+                    {
+                        $project: {
+                            content: 1,
+                            images: 1,
+                            createdAt: 1,
+                        },
+                    },
+                ],
+                as: "post",
+            },
+        },
+        {
+            $unwind: "$post",
+        },
+        {
+            $project: {
+                content: 1,
+                owner: 1,
+                createdAt: 1,
+                post: 1,
+            },
+        }
+    );
+
+    const comments = await Comment.aggregate(pipeline);
+
+    return res.status(200).json({ status: "success", comments });
 });
