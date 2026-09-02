@@ -48,18 +48,16 @@ export const register = catchAsync(async (req, res, next) => {
 
     setCookies(res, accessToken, refreshToken);
 
-    return res.status(200).json({
+    return res.status(201).json({
         status: "success",
         message: "user registered successfully",
         user: {
             _id: createdUser._id,
             username: createdUser.username,
             email: createdUser.email,
-            createdAT: createdUser.createdAt,
+            createdAt: createdUser.createdAt,
         },
-        token: {
-            accessToken,
-        },
+        accessToken,
     });
 });
 
@@ -88,7 +86,14 @@ export const login = catchAsync(async (req, res, next) => {
     setCookies(res, accessToken, refreshToken);
 
     return res.status(200).json({
+        status: "success",
         message: "user logged in successfully",
+        user: {
+            _id: user._id,
+            email: user.email,
+            createdAt: user.createdAt,
+            accessToken,
+        },
     });
 });
 
@@ -101,7 +106,9 @@ export const logout = catchAsync(async (req, res, next) => {
     res.clearCookie("accessToken", cookieOption);
     res.clearCookie("refreshToken", cookieOption);
 
-    return res.status(200).json({ message: "logout successfully" });
+    return res
+        .status(200)
+        .json({ status: "success", message: "logout successfully" });
 });
 
 export const refreshToken = catchAsync(async (req, res, next) => {
@@ -118,7 +125,7 @@ export const refreshToken = catchAsync(async (req, res, next) => {
         await generateAccessAndRefreshToken(user);
     setCookies(res, accessToken, refreshToken);
 
-    return res.status(200).json(accessToken);
+    return res.status(200).json({ status: "success", accessToken });
 });
 
 export const changeCurrentUserPassword = catchAsync(async (req, res, next) => {
@@ -153,7 +160,16 @@ export const changeCurrentUserPassword = catchAsync(async (req, res, next) => {
 
 export const getMe = catchAsync(async (req, res, next) => {
     const user = req.user;
-    return res.status(200).json({ user });
+    return res.status(200).json({
+        status: "success",
+        user: {
+            _id: user._id,
+            username: user.username,
+            email: user.email,
+            avatar: user.avatar,
+            coverImage: user.coverImage,
+        },
+    });
 });
 
 export const updateProfile = catchAsync(async (req, res, next) => {
@@ -203,8 +219,16 @@ export const updateAvatar = catchAsync(async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
 
     return res.status(200).json({
+        status: "success",
         message: "image updated",
-        user,
+        user: {
+            _id: user._id,
+            username: user.username,
+            email: user.email,
+            avatar: user.avatar,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+        },
     });
 });
 
@@ -234,9 +258,17 @@ export const updateCoverImage = catchAsync(async (req, res, next) => {
 
     await user.save({ validateBeforeSave: false });
 
-    return res
-        .status(200)
-        .json({ message: "cover image updated successfully", user });
+    return res.status(200).json({
+        message: "cover image updated successfully",
+        user: {
+            _id: user._id,
+            username: user.username,
+            email: user.email,
+            coverImage: user.coverImage,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+        },
+    });
 });
 
 export const getUserChannelProfileDetails = catchAsync(
