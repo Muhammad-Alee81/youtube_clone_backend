@@ -64,8 +64,18 @@ export const uploadVideo = catchAsync(async (req, res, next) => {
     }
 
     return res.status(201).json({
-        message: "video uploaded",
-        video: videoUpload,
+        status: "success",
+        message: "Video uploaded successfully",
+        video: {
+            _id: videoUpload._id,
+            title: videoUpload.title,
+            description: videoUpload.description,
+            thumbnail: videoUpload.thumbnail,
+            videoFile: videoUpload.videoFile,
+            duration: videoUpload.duration,
+            isPublished: videoUpload.isPublished,
+            createdAt: videoUpload.createdAt,
+        },
     });
 });
 
@@ -149,6 +159,7 @@ export const getVideoById = catchAsync(async (req, res, next) => {
                             as: "subscribers",
                         },
                     },
+
                     {
                         $addFields: {
                             subscribersCount: {
@@ -173,6 +184,7 @@ export const getVideoById = catchAsync(async (req, res, next) => {
                     {
                         $project: {
                             fullName: 1,
+                            username: 1,
                             subscribersCount: 1,
                             isSubscribed: 1,
                         },
@@ -183,13 +195,29 @@ export const getVideoById = catchAsync(async (req, res, next) => {
         {
             $unwind: "$owner",
         },
+
+        {
+            $project: {
+                title: 1,
+                description: 1,
+                thumbnail: 1,
+                videoFile: 1,
+                duration: 1,
+                isPublished: 1,
+                views: 1,
+                likesCount: 1,
+                commentsCount: 1,
+                owner: 1,
+                createdAt: 1,
+            },
+        },
     ]);
 
     if (!video) {
         return next(new ApiError("video not found", 404));
     }
 
-    return res.status(200).json({ video });
+    return res.status(200).json({ status: "success", video });
 });
 
 export const updateVideo = catchAsync(async (req, res, next) => {
@@ -234,9 +262,19 @@ export const updateVideo = catchAsync(async (req, res, next) => {
 
     const updatedVideo = await video.save();
 
-    return res
-        .status(200)
-        .json({ message: "video updated successfully", updatedVideo });
+    return res.status(200).json({
+        status: "success",
+        message: "video updated successfully",
+        video: {
+            _id: updatedVideo._id,
+            title: updatedVideo.title,
+            description: updatedVideo.description,
+            thumbnail: updatedVideo.thumbnail,
+            videoFile: updatedVideo.videoFile,
+            duration: updatedVideo.duration,
+            updatedAt: updatedVideo.updatedAt,
+        },
+    });
 });
 
 export const deleteVideo = catchAsync(async (req, res, next) => {
@@ -261,9 +299,17 @@ export const deleteVideo = catchAsync(async (req, res, next) => {
     await deleteImageFile(video?.thumbnail?.publicId);
     await deleteVideoFile(video?.videoFile?.publicId);
 
-    return res
-        .status(200)
-        .json({ message: "video deleted successfully", video });
+    return res.status(200).json({
+        status: "success",
+        message: "video deleted successfully",
+        video: {
+            _id: video._id,
+            title: video.title,
+            description: video.description,
+            thumbnail: video.thumbnail,
+            videoFile: video.videoFile,
+        },
+    });
 });
 
 export const togglePublishStatus = catchAsync(async (req, res, next) => {
@@ -288,8 +334,12 @@ export const togglePublishStatus = catchAsync(async (req, res, next) => {
     await video.save();
 
     return res.status(200).json({
+        status: "success",
         message: "Video publish status updated successfully",
-        video,
+        video: {
+            _id: video._id,
+            isPublished: video.isPublished,
+        },
     });
 });
 

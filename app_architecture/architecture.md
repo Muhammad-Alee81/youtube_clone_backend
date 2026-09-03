@@ -25,3 +25,11 @@ Note:
     Har Comment aur Har Reply database mein ek alag document hota hai.
     Kisi document ke andar replies ka array store nahi hota.
 */
+
+
+
+Missing features 
+
+(-----User controller ----)
+updated user ka api nhi h 
+delete user ka api nhi h 
