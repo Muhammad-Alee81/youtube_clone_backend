@@ -81,7 +81,16 @@ export const getPlayListById = catchAsync(async (req, res, next) => {
         return next(new ApiError("Invalid Id", 400));
     }
 
-    const playList = await Playlist.findById(req.params.id);
+    const playList = await Playlist.findById(req.params.id)
+        .select("-__v")
+        .populate({
+            path: "videos",
+            select: "_id title  description duration views owner isPublished createdAt",
+            populate: {
+                path: "owner",
+                select: "username fullName avatar",
+            },
+        });
 
     if (!playList) {
         return next(new ApiError("playlist not found", 404));
@@ -127,7 +136,7 @@ export const addVideoToPlaylist = catchAsync(async (req, res, next) => {
             },
         },
         { returnDocument: "after" }
-    );
+    ).select("-__v");
 
     if (!playList) {
         return next(new ApiError("playlist not found", 404));
@@ -170,7 +179,7 @@ export const removeVideoFromPlaylist = catchAsync(async (req, res, next) => {
             },
         },
         { returnDocument: "after" }
-    );
+    ).select("-__v");
 
     if (!playList) {
         return next(new ApiError("Playlist not found", 404));
