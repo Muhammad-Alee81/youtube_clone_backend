@@ -46,9 +46,15 @@ export const subscribeChannel = catchAsync(async (req, res, next) => {
         channel: channelId,
     });
 
-    return res
-        .status(201)
-        .json({ message: "channel Subscribed", data: subscribe });
+    return res.status(201).json({
+        message: "channel Subscribed",
+        data: {
+            _id: subscribe._id,
+            subscriber: subscribe.subscriber,
+            channel: subscribe.channel,
+            createdAt: subscribe.createdAt,
+        },
+    });
 });
 
 export const unSubscribeChannel = catchAsync(async (req, res, next) => {
@@ -74,9 +80,17 @@ export const unSubscribeChannel = catchAsync(async (req, res, next) => {
         );
     }
 
-    return res
-        .status(200)
-        .json({ message: "channel unsubscribed", data: unSubscribe });
+    return res.status(200).json({
+        message: "channel unsubscribed",
+        data: {
+            data: {
+                _id: unSubscribe._id,
+                subscriber: unSubscribe.subscriber,
+                channel: unSubscribe.channel,
+                createdAt: unSubscribe.createdAt,
+            },
+        },
+    });
 });
 
 export const recentSubscribers = catchAsync(async (req, res, next) => {
