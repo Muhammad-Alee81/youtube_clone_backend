@@ -44,7 +44,15 @@ export const addComment = catchAsync(async (req, res, next) => {
         }
     );
 
-    return res.status(201).json({ status: "success", comment });
+    return res.status(201).json({
+        status: "success",
+        comment: {
+            _id: comment._id,
+            content: comment.content,
+            commnetOn: comment.commentOn,
+            createdAt: comment.createdAt,
+        },
+    });
 });
 
 export const replyToComment = catchAsync(async (req, res, next) => {
@@ -65,7 +73,7 @@ export const replyToComment = catchAsync(async (req, res, next) => {
         return next(new ApiError("Comment content is required", 400));
     }
 
-    const childComment = await Comment.create({
+    const reply = await Comment.create({
         content,
         commentOn: {
             type: comment.commentOn.type,
@@ -78,7 +86,17 @@ export const replyToComment = catchAsync(async (req, res, next) => {
         replyTo: comment.owner,
     });
 
-    return res.status(201).json({ childComment });
+    return res.status(201).json({
+        reply: {
+            _id: reply._id,
+            content: reply.content,
+            commentOn: reply.commentOn,
+            owner: reply.owner,
+            parentComment: reply.parentComment,
+            replyTo: reply.replyTo,
+            createdAt: reply.createdAt,
+        },
+    });
 });
 
 export const updateComment = catchAsync(async (req, res, next) => {
@@ -97,13 +115,14 @@ export const updateComment = catchAsync(async (req, res, next) => {
         { _id: commentId, owner: req.user.id, isDeleted: false },
         { $set: { content } },
         { returnDocument: "after" }
-    );
+    ).select("-__v -isDeleted ");
 
     if (!updatedComment) {
         return next(new ApiError("Comment not Found", 404));
     }
 
     return res.status(200).json({
+        status: "success",
         message: "comment updated successfully",
         updatedComment,
     });
@@ -120,7 +139,7 @@ export const deleteComment = catchAsync(async (req, res, next) => {
         { _id: commentId, owner: req.user.id, isDeleted: false },
         { $set: { isDeleted: true, content: "[Comment Deleted]" } },
         { returnDocument: "after" }
-    );
+    ).select("-__v -updatedAt -createdAt");
 
     if (!deletedComment) {
         return next(new ApiError("Comment not Found", 404));
@@ -383,7 +402,16 @@ export const addCommentOnPost = catchAsync(async (req, res, next) => {
         owner: req.user.id,
     });
 
-    return res.status(201).json({ message: "comment added", addComment });
+    return res.status(201).json({
+        status: "success",
+        message: "comment added",
+        comment: {
+            _id: addComment._id,
+            content: addComment.content,
+            commnetOn: addComment.commentOn,
+            createdAt: addComment.createdAt,
+        },
+    });
 });
 
 export const getAllParentCommentsOnPost = catchAsync(async (req, res, next) => {

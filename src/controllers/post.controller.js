@@ -52,7 +52,16 @@ export const createPost = catchAsync(async (req, res, next) => {
         );
     }
 
-    return res.status(201).json({ message: "Post created successfully" });
+    return res.status(201).json({
+        status: "success",
+        message: "Post created successfully",
+        post: {
+            _id: post._id,
+            content: post._content,
+            images: post.images,
+            createdAt: post.createdAt,
+        },
+    });
 });
 
 export const deletePost = catchAsync(async (req, res, next) => {
@@ -83,7 +92,15 @@ export const deletePost = catchAsync(async (req, res, next) => {
         })
     );
 
-    return res.status(200).json({ message: "Post deleted", deletePost });
+    return res.status(200).json({
+        status: "success",
+        message: "Post deleted",
+        post: {
+            _id: deletePost._id,
+            content: deletePost.content,
+            images: deletePost.images,
+        },
+    });
 });
 
 export const updatePost = catchAsync(async (req, res, next) => {
@@ -116,15 +133,17 @@ export const updatePost = catchAsync(async (req, res, next) => {
         {
             returnDocument: "after",
         }
-    );
+    ).select("-__v -owner -createdAt ");
 
     if (!updatePost) {
         return next(new ApiError("Post not found", 404));
     }
 
-    return res
-        .status(200)
-        .json({ message: "post updated successfully", updatePost });
+    return res.status(200).json({
+        status: "success",
+        message: "post updated successfully",
+        updatePost,
+    });
 });
 
 export const getAllPost = catchAsync(async (req, res, next) => {
