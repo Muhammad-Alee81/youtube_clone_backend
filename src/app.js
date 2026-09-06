@@ -48,7 +48,4 @@ app.use("/api/v1/watch-history", historyRouter);
 // DASHBOARD ROUTES
 app.use("/api/v1/dashboard", dashboardRouter);
 
-
-
-
 export { app };
