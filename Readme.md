@@ -2,7 +2,7 @@
 
 Complete API documentation for the Video Tube backend is available here:
 
-**[View API Documentation](./docs/index.html)**
+**[View API Documentation](https://muhammad-alee81.github.io/youtube_clone_backend/)**
 
 The documentation covers the backend REST APIs, including:
 
